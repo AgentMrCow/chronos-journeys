@@ -1,0 +1,340 @@
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Volume2, Star, BookOpen } from "lucide-react";
+import { mianchiScenes, type GameScene, type Choice } from "@/data/mianchiLevel";
+import { AccessibilityProvider, useAccessibility } from "@/contexts/AccessibilityContext";
+import AccessibilityPanel from "@/components/AccessibilityPanel";
+
+const GameEngine = () => {
+  const navigate = useNavigate();
+  const { speak, ttsEnabled } = useAccessibility();
+  const [sceneId, setSceneId] = useState("intro");
+  const [dialogueIndex, setDialogueIndex] = useState(-1); // -1 = showing narration
+  const [showPuzzle, setShowPuzzle] = useState(false);
+  const [selectedChoice, setSelectedChoice] = useState<Choice | null>(null);
+  const [totalScore, setTotalScore] = useState(0);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [sceneTransition, setSceneTransition] = useState(false);
+
+  const scene = mianchiScenes[sceneId];
+
+  const goToScene = useCallback(
+    (id: string) => {
+      setSceneTransition(true);
+      setTimeout(() => {
+        setSceneId(id);
+        setDialogueIndex(-1);
+        setShowPuzzle(false);
+        setSelectedChoice(null);
+        setShowFeedback(false);
+        setSceneTransition(false);
+      }, 600);
+    },
+    []
+  );
+
+  // Auto-speak narration
+  useEffect(() => {
+    if (dialogueIndex === -1 && ttsEnabled && scene) {
+      speak(scene.narration);
+    }
+  }, [sceneId, dialogueIndex, ttsEnabled]);
+
+  const advance = () => {
+    if (showFeedback) {
+      // after feedback, go to next scene
+      if (selectedChoice) goToScene(selectedChoice.nextScene);
+      return;
+    }
+    if (showPuzzle) return; // wait for choice
+    if (dialogueIndex < scene.dialogues.length - 1) {
+      const next = dialogueIndex + 1;
+      setDialogueIndex(next);
+      if (ttsEnabled) speak(scene.dialogues[next].text);
+    } else if (scene.puzzle) {
+      setShowPuzzle(true);
+    } else if (scene.nextScene) {
+      goToScene(scene.nextScene);
+    }
+  };
+
+  const handleChoice = (choice: Choice) => {
+    setSelectedChoice(choice);
+    setTotalScore((s) => s + choice.points);
+    setShowFeedback(true);
+    if (ttsEnabled) speak(choice.feedback);
+  };
+
+  if (!scene) return null;
+
+  const isEnd = sceneId === "end";
+
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-background">
+      {/* Background */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={scene.background}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.6 }}
+          className="absolute inset-0"
+        >
+          <img
+            src={scene.background}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Transition overlay */}
+      <AnimatePresence>
+        {sceneTransition && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-background"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Top HUD */}
+      <div className="relative z-10 flex items-center justify-between px-6 py-4">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 rounded-lg bg-secondary/80 px-3 py-2 text-sm text-secondary-foreground backdrop-blur transition-colors hover:bg-secondary"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          返回 Back
+        </button>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 rounded-full bg-secondary/80 px-3 py-1 backdrop-blur">
+            <Star className="h-4 w-4 text-gold" />
+            <span className="text-sm font-bold text-gold">{totalScore}</span>
+          </div>
+          <div className="rounded-full bg-secondary/80 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
+            {scene.title}
+          </div>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="relative z-10 flex min-h-[calc(100vh-80px)] flex-col justify-end px-4 pb-6 md:px-8">
+        {isEnd ? (
+          /* End screen */
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mx-auto max-w-lg text-center"
+          >
+            <div className="mb-6 rounded-2xl border border-gold/30 bg-card/90 p-8 backdrop-blur">
+              <h2 className="mb-2 font-serif text-3xl font-bold text-shimmer">
+                🎉 通關完成！
+              </h2>
+              <p className="mb-1 text-sm text-gold">Level Complete!</p>
+              <div className="my-6 flex items-center justify-center gap-2">
+                <Star className="h-8 w-8 text-gold" />
+                <span className="font-serif text-4xl font-black text-gold">
+                  {totalScore}
+                </span>
+                <span className="text-muted-foreground">分</span>
+              </div>
+              <p className="mb-2 text-sm text-foreground">{scene.narration}</p>
+              <p className="mb-6 text-xs text-mist">{scene.narrationEn}</p>
+
+              <div className="mb-4 rounded-lg bg-muted/50 p-4 text-left">
+                <div className="mb-2 flex items-center gap-2 text-sm text-gold">
+                  <BookOpen className="h-4 w-4" />
+                  歷史小知識
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  「澠池之會」出自《史記·廉頗藺相如列傳》，是司馬遷記錄的著名外交故事。藺相如憑智勇保全趙國尊嚴，被封為上卿，官位在廉頗之上，後來引發了「負荊請罪」的故事。
+                </p>
+                <p className="mt-1 text-xs text-mist">
+                  The Meeting at Mianchi is from Sima Qian's "Records of the Grand Historian." Lin Xiangru's bravery led to his promotion above Lian Po, which later inspired the famous story of "Carrying Thorns to Apologize."
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => goToScene("intro")}
+                  className="flex-1 rounded-lg bg-secondary py-3 text-sm text-secondary-foreground transition-colors hover:bg-secondary/80"
+                >
+                  重玩 Replay
+                </button>
+                <button
+                  onClick={() => navigate("/")}
+                  className="flex-1 rounded-lg bg-primary py-3 text-sm text-primary-foreground shadow-lg shadow-primary/30 transition-colors hover:bg-primary/90"
+                >
+                  返回首頁 Home
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          /* Game scene */
+          <div className="mx-auto w-full max-w-3xl">
+            {/* Narration (shown first) */}
+            <AnimatePresence mode="wait">
+              {dialogueIndex === -1 && (
+                <motion.div
+                  key="narration"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="mb-4"
+                >
+                  <div className="rounded-xl border border-gold/20 bg-card/90 p-6 backdrop-blur">
+                    <h3 className="mb-3 font-serif text-xl font-bold text-gold">
+                      {scene.title}
+                    </h3>
+                    <p className="mb-2 text-sm leading-relaxed text-foreground">
+                      {scene.narration}
+                    </p>
+                    <p className="text-xs leading-relaxed text-mist">
+                      {scene.narrationEn}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Dialogues */}
+            <AnimatePresence>
+              {dialogueIndex >= 0 && (
+                <div className="mb-4 space-y-3">
+                  {scene.dialogues.slice(0, dialogueIndex + 1).map((d, i) => (
+                    <motion.div
+                      key={`${sceneId}-d-${i}`}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="flex gap-3"
+                    >
+                      <img
+                        src={d.avatar}
+                        alt={d.speaker}
+                        className="h-12 w-12 flex-shrink-0 rounded-full border-2 border-gold/40 object-cover"
+                      />
+                      <div className="flex-1 rounded-xl bg-card/90 p-4 backdrop-blur">
+                        <div className="mb-1 flex items-center gap-2">
+                          <span className="font-serif text-sm font-bold text-gold">
+                            {d.speaker}
+                          </span>
+                          <span className="text-xs text-mist">{d.speakerEn}</span>
+                          <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-xs">
+                            {d.emotion}
+                          </span>
+                        </div>
+                        <p className="text-sm text-foreground">{d.text}</p>
+                        <p className="mt-1 text-xs text-mist">{d.textEn}</p>
+                        <p className="mt-2 text-xs text-jade">💡 {d.hint}</p>
+                        <p className="text-xs text-jade/70">{d.hintEn}</p>
+                        {ttsEnabled && (
+                          <button
+                            onClick={() => speak(d.text)}
+                            className="mt-2 text-muted-foreground hover:text-gold"
+                          >
+                            <Volume2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* Puzzle */}
+            <AnimatePresence>
+              {showPuzzle && scene.puzzle && !showFeedback && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 rounded-xl border border-vermillion/30 bg-card/90 p-6 backdrop-blur"
+                >
+                  <p className="mb-1 font-serif font-bold text-vermillion">
+                    {scene.puzzle.question}
+                  </p>
+                  <p className="mb-4 text-xs text-mist">
+                    {scene.puzzle.questionEn}
+                  </p>
+                  <div className="space-y-2">
+                    {scene.puzzle.choices.map((c, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleChoice(c)}
+                        className="w-full rounded-lg border border-border bg-secondary/50 p-4 text-left transition-all hover:border-gold/40 hover:bg-secondary"
+                      >
+                        <p className="text-sm text-foreground">{c.text}</p>
+                        <p className="mt-0.5 text-xs text-mist">{c.textEn}</p>
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Feedback */}
+            <AnimatePresence>
+              {showFeedback && selectedChoice && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mb-4 rounded-xl border border-gold/30 bg-card/90 p-6 backdrop-blur"
+                >
+                  <p className="mb-1 text-sm font-bold text-foreground">
+                    {selectedChoice.feedback}
+                  </p>
+                  <p className="mb-3 text-xs text-mist">
+                    {selectedChoice.feedbackEn}
+                  </p>
+                  {selectedChoice.points > 0 && (
+                    <p className="text-sm text-gold">
+                      +{selectedChoice.points} 分 points ⭐
+                    </p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Advance button */}
+            {!isEnd && !(showPuzzle && !showFeedback) && (
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={advance}
+                className="w-full rounded-xl bg-secondary/80 py-4 text-center text-sm font-medium text-secondary-foreground backdrop-blur transition-all hover:bg-secondary"
+              >
+                {showFeedback
+                  ? "繼續 Continue →"
+                  : dialogueIndex < scene.dialogues.length - 1
+                  ? "下一句 Next →"
+                  : scene.puzzle
+                  ? "進入挑戰 Challenge →"
+                  : scene.nextScene
+                  ? "繼續 Continue →"
+                  : ""}
+              </motion.button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <AccessibilityPanel />
+    </div>
+  );
+};
+
+const MianchiLevel = () => (
+  <AccessibilityProvider>
+    <GameEngine />
+  </AccessibilityProvider>
+);
+
+export default MianchiLevel;
