@@ -317,12 +317,12 @@ const buildFallbackSummary = (args: {
   timeRemaining: number;
 }): DirectorSummary => {
   const cluePressure =
-    args.clueIds.length >= 4 ? "你已抓到秦廷真正的破綻。" : "你還需要更多能落地的證據。";
+    args.clueIds.length >= 4 ? "你已掌握幾個關鍵破綻。" : "還需要補幾條能站得住的證據。";
   const average = (args.stats.composure + args.stats.insight + args.stats.leverage) / 3;
   const grade =
     average >= 82 ? "S" : average >= 72 ? "A" : average >= 58 ? "B" : average >= 45 ? "C" : "D";
 
-  const latestAction = args.actionLog.at(-1)?.label || "剛進入歷史節點";
+  const latestAction = args.actionLog.at(-1)?.label || "剛接手此事";
   const weakest =
     args.stats.insight <= args.stats.leverage && args.stats.insight <= args.stats.composure
       ? "洞察"
@@ -332,22 +332,22 @@ const buildFallbackSummary = (args: {
 
   return {
     grade,
-    judgement: `你目前的節奏是「${latestAction}」之後的延伸。${cluePressure}`,
+    judgement: `眼下局勢接在「${latestAction}」之後。${cluePressure}`,
     nextStep:
       args.timeRemaining < 45
-        ? "時間快見底了，別再停留在觀望，立刻執行能改變局面的關鍵動作。"
-        : `下一步要補強的是${weakest}，並確保本節點的關鍵線索先湊齊。`,
+        ? "剩下的時間不多了，別再觀望，先做最能改變局面的那一步。"
+        : `下一步宜先補強${weakest}，再把本章線索補齊。`,
     strength:
       args.stats.insight >= args.stats.leverage && args.stats.insight >= args.stats.composure
-        ? "你讀得懂秦廷的真意，這是藺相如最重要的本事。"
+        ? "你已看出秦廷的用意，判斷方向是對的。"
         : args.stats.leverage >= args.stats.composure
-        ? "你仍把和氏璧與流程主導權握在自己這邊。"
-        : "你的膽識還撐得住局面，秦廷暫時不敢直接翻桌。",
-    title: `${wanbiNodes[args.currentNodeId].chapter} · 史官評述`,
+        ? "玉璧與節奏暫時還握在你手裡。"
+        : "你還撐得住場面，秦廷暫時不敢硬來。",
+    title: `${wanbiNodes[args.currentNodeId].chapter} · 局勢評估`,
     warning:
       args.timeRemaining < 45
-        ? "再遲疑，門禁與侍衛會比你的智計更快。"
-        : `若${weakest}繼續偏低，你的下一個錯判就可能直接導致失敗。`,
+        ? "再拖下去，門禁和侍衛會先收緊。"
+        : `若${weakest}再失手，下一步就容易出錯。`,
   };
 };
 
@@ -366,7 +366,7 @@ const buildFallbackCharacterReply = (args: {
 
   return `${character.intro} ${clueTone} 關於「${args.prompt.slice(0, 28)}${
     args.prompt.length > 28 ? "…" : ""
-  }」，${character.name}暫時只願意透露這些，先把節點中的探查點挖乾淨會更有效。`;
+  }」，${character.name}暫時只肯說到這裡。先把這一段能問的都問清楚，再往下追會更穩妥。`;
 };
 
 const getCurrentNodeImageClue = (currentNodeId: NodeId, clueIds: ClueId[]) => {
@@ -441,7 +441,6 @@ const GameEngine = () => {
   const displayedImageClue = getCurrentNodeImageClue(currentNodeId, discoveredClueIds);
   const displayedImageState = displayedImageClue ? generatedImages[displayedImageClue.id] : undefined;
   const hasOpenRouter = runtimeApiKey.trim().length > 0;
-  const aiModeLabel = hasOpenRouter ? "沉浸式史官模式" : "離線史官模式";
   const timerProgress = (timeRemaining / WANBI_TOTAL_TIME) * 100;
   const timerCritical = timeRemaining <= 45;
   const isClockPaused = chatLoading || summaryLoading || phase !== "playing";
@@ -1007,7 +1006,7 @@ const GameEngine = () => {
                 <div className="rounded-full border border-border/70 bg-background/40 px-3 py-2 text-xs">
                   <div className="mb-1 flex items-center gap-2 text-muted-foreground">
                     <Clock3 className="h-3.5 w-3.5 text-vermillion" />
-                    <span>{timerCritical ? "秦廷封局中" : "仍可操作"}</span>
+                    <span>{timerCritical ? "情勢緊迫" : "尚可周旋"}</span>
                     <span className={`font-serif text-sm ${timerCritical ? "text-vermillion" : "text-gold"}`}>
                       {timeRemaining}s
                     </span>
@@ -1056,7 +1055,7 @@ const GameEngine = () => {
                   ["actions", "場景行動", WandSparkles],
                   ["conversation", "人物對談", MessageSquare],
                   ["clues", "線索卷宗", BookOpen],
-                  ["director", "史官評述", Brain],
+                  ["director", "局勢評估", Brain],
                 ] as const).map(([value, label, Icon]) => (
                   <button
                     key={value}
@@ -1085,7 +1084,7 @@ const GameEngine = () => {
 
             {!isConsoleOpen && (
               <div className="mt-3 rounded-2xl border border-border/60 bg-background/30 px-4 py-3 text-xs text-parchment/80">
-                點場景中的人物或地點，再展開操作。已穿越節點{" "}
+                先點場景中的人物或地點，再決定下一步。已完成章節{" "}
                 {completedNodeIds.length + (phase === "briefing" ? 0 : 1)}。
               </div>
             )}
@@ -1096,7 +1095,7 @@ const GameEngine = () => {
                   <div className="grid h-full gap-4 lg:grid-cols-[0.9fr_1.1fr]">
                     <div className="rounded-[26px] border border-border/70 bg-background/45 p-5">
                       <p className="mb-2 text-xs uppercase tracking-[0.28em] text-gold/70">
-                        場景位置已選中
+                        目前選項
                       </p>
                       <h3 className="font-serif text-2xl text-foreground">{selectedAction.label}</h3>
                       <p className="mt-3 text-sm leading-7 text-muted-foreground">
@@ -1117,7 +1116,7 @@ const GameEngine = () => {
                         )}
                         {selectedAction.winMission && (
                           <span className="rounded-full border border-jade/30 px-3 py-1 text-jade">
-                            決勝動作
+                          關鍵行動
                           </span>
                         )}
                       </div>
@@ -1243,7 +1242,7 @@ const GameEngine = () => {
                     <div className="mt-4 flex flex-wrap gap-2">
                       {activeCharacterTopics.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                          這名角色在本節點沒有固定探查點，但你仍可直接盤問。
+                          這名角色在這一段沒有固定線索，但還是可以直接發問。
                         </p>
                       ) : (
                         activeCharacterTopics.map((topic) => (
@@ -1269,7 +1268,7 @@ const GameEngine = () => {
                       <div className="space-y-3 pr-3">
                         {activeCharacterLog.length === 0 ? (
                           <p className="text-sm leading-7 text-muted-foreground">
-                            點擊畫面中的人物，或使用上方探查點，先讓場景裡的人開口。
+                            先點人物，或從上方問題開始問。
                           </p>
                         ) : (
                           activeCharacterLog.map((entry) => (
@@ -1305,7 +1304,7 @@ const GameEngine = () => {
                       <Textarea
                         value={questionDraft}
                         onChange={(event) => setQuestionDraft(event.target.value)}
-                        placeholder="直接盤問當前人物。這不是聊天室，而是臨場套話。"
+                        placeholder="想問什麼，就直接開口。"
                         className="min-h-[96px] rounded-2xl bg-background/65"
                       />
                       <button
@@ -1313,7 +1312,7 @@ const GameEngine = () => {
                         disabled={phase !== "playing" || chatLoading || !questionDraft.trim()}
                         className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {chatLoading ? "角色思考中…" : "發問 · -6s"}
+                        {chatLoading ? "對方回話中…" : "發問 -6s"}
                       </button>
                     </div>
                   </div>
@@ -1331,7 +1330,7 @@ const GameEngine = () => {
                       <div className="space-y-3">
                         {discoveredClueIds.length === 0 ? (
                           <p className="text-sm leading-7 text-muted-foreground">
-                            還沒有可靠線索。先在畫面中接觸人物與地點，把秦廷失信的證據鏈拼起來。
+                            目前還沒有可靠線索，先去接觸人物或地點。
                           </p>
                         ) : (
                           discoveredClueIds.map((clueId) => {
@@ -1360,7 +1359,7 @@ const GameEngine = () => {
                   <div className="rounded-[26px] border border-border/70 bg-background/45 p-5">
                     <div className="mb-3 flex items-center gap-2 text-gold">
                       <ImageIcon className="h-4 w-4" />
-                      場景重建
+                      參考畫面
                     </div>
 
                     {displayedImageClue ? (
@@ -1382,7 +1381,7 @@ const GameEngine = () => {
                           />
                         ) : displayedImageState?.status === "loading" ? (
                           <div className="flex h-56 items-center justify-center rounded-2xl border border-border/60 bg-secondary/30 text-sm text-muted-foreground">
-                            正在重建這個歷史瞬間…
+                            畫面準備中…
                           </div>
                         ) : displayedImageState?.status === "error" ? (
                           <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-muted-foreground">
@@ -1391,8 +1390,8 @@ const GameEngine = () => {
                         ) : (
                           <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-border/60 bg-secondary/30 text-sm text-muted-foreground">
                             {hasOpenRouter
-                              ? "這條線索已解鎖，場景影像即將生成。"
-                              : "目前是離線模式，場景影像無法重建。"}
+                              ? "這條線索已解鎖，稍後會顯示對應畫面。"
+                              : "目前無法顯示這條線索的畫面。"}
                           </div>
                         )}
 
@@ -1402,7 +1401,7 @@ const GameEngine = () => {
                       </div>
                     ) : (
                       <div className="flex h-full min-h-56 items-center justify-center rounded-2xl border border-dashed border-border/60 bg-secondary/30 px-6 text-center text-sm text-muted-foreground">
-                        先在場景裡追出一條具像線索，這裡才會出現對應的歷史畫面。
+                        取得帶圖像的線索後，這裡會顯示對應畫面。
                       </div>
                     )}
                   </div>
@@ -1416,7 +1415,7 @@ const GameEngine = () => {
                       <div>
                         <p className="font-serif text-2xl text-foreground">{directorSummary.title}</p>
                         <p className="text-xs uppercase tracking-[0.2em] text-gold">
-                          Grade {directorSummary.grade} · {summaryMode === "ai" ? "即時史官推演" : "離線推演"}
+                          評級 {directorSummary.grade} · {summaryMode === "ai" ? "即時分析" : "本地分析"}
                         </p>
                       </div>
                       <button
@@ -1426,26 +1425,26 @@ const GameEngine = () => {
                       >
                         <span className="inline-flex items-center gap-1">
                           <RefreshCcw className="h-3.5 w-3.5" />
-                          重算
+                          更新
                         </span>
                       </button>
                     </div>
 
                     <div className="space-y-3 text-sm leading-7">
                       <p>
-                        <span className="text-gold">判斷：</span>
+                        <span className="text-gold">評估：</span>
                         {directorSummary.judgement}
                       </p>
                       <p>
-                        <span className="text-gold">優勢：</span>
+                        <span className="text-gold">有利處：</span>
                         {directorSummary.strength}
                       </p>
                       <p>
-                        <span className="text-gold">警告：</span>
+                        <span className="text-gold">風險：</span>
                         {directorSummary.warning}
                       </p>
                       <p>
-                        <span className="text-gold">下一步：</span>
+                        <span className="text-gold">建議：</span>
                         {directorSummary.nextStep}
                       </p>
                     </div>
@@ -1455,42 +1454,39 @@ const GameEngine = () => {
                     <div className="rounded-[26px] border border-border/70 bg-background/45 p-5">
                       <div className="mb-3 flex items-center gap-2 text-gold">
                         <Crown className="h-4 w-4" />
-                        導演層狀態
+                        任務提示
                       </div>
                       <p className="text-sm leading-7 text-muted-foreground">
-                        {hasOpenRouter
-                          ? "人物回應、史官評語與歷史場景重建都已啟用。玩家不需要設定任何東西，只需要專注在判斷與行動。"
-                          : "目前為離線模式。整體節點仍可完整遊玩，但人物回應、史官評述與場景影像會退回本地後備內容。"}
+                        先確認秦廷是不是照交換之禮行事，再決定何時取回玉璧。若路線與門禁還沒摸清，就別急著把牌打完。
                       </p>
                     </div>
 
                     <div className="rounded-[26px] border border-border/70 bg-background/45 p-5">
                       <div className="mb-3 flex items-center gap-2 text-gold">
                         <Mic2 className="h-4 w-4" />
-                        聲音層
+                        語音
                       </div>
                       <p className="text-sm leading-7 text-muted-foreground">
-                        角色回應與史官評述都能直接用右下角無障礙面板中的系統聲線朗讀。
-                        這一層只輔助沉浸感，不要求玩家自己處理任何模型或服務。
+                        需要朗讀時，可用左下角設定調整聲音與字體大小。
                       </p>
                       <button
                         onClick={() => speak(directorSummary.judgement, { rate: 0.96 })}
                         className="mt-4 rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold"
                       >
-                        朗讀史官評述
+                        朗讀評估
                       </button>
                     </div>
 
                     <div className="rounded-[26px] border border-border/70 bg-background/45 p-5">
                       <div className="mb-3 flex items-center gap-2 text-gold">
                         <RotateCcw className="h-4 w-4" />
-                        任務控制
+                        重新開始
                       </div>
                       <button
                         onClick={resetMission}
                         className="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold"
                       >
-                        重置整場任務
+                        重設任務
                       </button>
                     </div>
                   </div>
@@ -1506,25 +1502,25 @@ const GameEngine = () => {
             <div className="max-w-3xl rounded-[34px] border border-gold/25 bg-background/75 p-8 backdrop-blur-2xl">
               <div className="mb-4 flex items-center gap-2 text-gold">
                 <Sparkles className="h-5 w-5" />
-                進入歷史節點
+                任務說明
               </div>
-              <h2 className="font-serif text-4xl text-shimmer">你不是在看故事，你就是藺相如</h2>
+              <h2 className="font-serif text-4xl text-shimmer">完璧歸趙</h2>
               <p className="mt-4 text-sm leading-8 text-parchment/90">
-                進入場景後，直接在畫面上點選人物與地點。與趙王、侍者、史官周旋，從線索裡讀出秦廷的真意，
-                再在時限內做出會改變歷史走向的操作。
+                你將從趙廷出發，先查清秦國是否真肯交城，再在章臺、殿柱與舍館之間找出送璧返趙的辦法。
+                時間有限，每一步都會改變後面的局勢。
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
                   onClick={() => void startMission()}
                   className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition-transform hover:scale-[1.02]"
                 >
-                  進入場景
+                  開始
                 </button>
                 <button
                   onClick={resetMission}
                   className="rounded-full border border-border px-6 py-3 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold"
                 >
-                  重置任務
+                  重新開始
                 </button>
               </div>
             </div>
@@ -1536,7 +1532,7 @@ const GameEngine = () => {
             <div className="max-w-3xl rounded-[34px] border border-destructive/25 bg-background/80 p-8 backdrop-blur-2xl">
               <div className="mb-3 flex items-center gap-2 text-destructive">
                 <ShieldAlert className="h-5 w-5" />
-                失敗節點
+                任務失敗
               </div>
               <h2 className="font-serif text-4xl text-foreground">{activeFailState.title}</h2>
               <p className="mt-4 text-sm leading-8 text-parchment/90">{activeFailState.whyItFailed}</p>
@@ -1552,7 +1548,7 @@ const GameEngine = () => {
                   onClick={resetMission}
                   className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground"
                 >
-                  重啟整場任務
+                  重新開始
                 </button>
                 <button
                   onClick={() => navigate("/")}
@@ -1574,8 +1570,8 @@ const GameEngine = () => {
               </div>
               <h2 className="font-serif text-5xl text-shimmer">{wanbiVictorySummary.title}</h2>
               <p className="mt-4 text-sm leading-8 text-parchment/90">
-                你完成的不是一串問答，而是一條完整的歷史操作鏈：先驗誠意，再讀失禮，後奪主導，
-                最後把玉璧與風險拆開處理。這才是藺相如面對強秦時真正的勝法。
+                你先確認秦國無意交城，再取回玉璧，借禮制拖住局面，最後命從者懷璧先返。
+                這就是《史記》所寫的完璧歸趙。
               </p>
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
@@ -1599,7 +1595,7 @@ const GameEngine = () => {
                   onClick={resetMission}
                   className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground"
                 >
-                  再進一次節點
+                  再玩一次
                 </button>
                 <button
                   onClick={() => navigate("/")}

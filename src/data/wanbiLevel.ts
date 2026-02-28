@@ -231,7 +231,7 @@ export const wanbiClues: Record<ClueId, WanbiClue> = {
   },
   nightCourierWindow: {
     id: "nightCourierWindow",
-    historicalMeaning: "真正能讓玉璧返趙的不是殿上豪言，而是你手中是否握有夜間脫身與傳遞的節點。",
+    historicalMeaning: "玉璧能否返趙，關鍵不在殿上言辭，而在是否抓準夜間傳遞的時機。",
     sourceReference: "相如使從者懷璧歸趙，說明執行層面的時機安排同樣重要。",
     summary: "深夜交班前有一小段空檔，適合秘密送走和氏璧。",
     title: "夜間交班空檔",
@@ -256,14 +256,14 @@ export const wanbiNodes: Record<NodeId, WanbiNode> = {
   "zhao-court": {
     availableCharacters: ["zhaoWang", "courtScribe", "zhaoCourier"],
     background: sceneCamp,
-    chapter: "History Node 01",
+    chapter: "第一幕",
     historicalReference:
       "趙王得和氏璧，而秦昭王願以十五城請易。此刻真正的問題不是要不要去，而是如何不讓趙國白白失璧。",
     id: "zhao-court",
     missionObjective: "先讀懂秦國條件的真假，再決定以何種姿態奉璧入秦。",
     nodeSummary:
-      "你不是旁觀者，而是藺相如本人。趙廷燭影搖動，滿朝都在看你如何接下這場不對等的談判。",
-    pressureNote: "時間在流失。若你遲疑太久，趙廷會自行做出更糟的決定。",
+      "趙廷燭影未滅，群臣都在等你的答覆。入秦可以，但不能白白失璧。",
+    pressureNote: "趙廷催著要答覆。拖得越久，越容易先失主動。",
     probeTopics: [
       {
         id: "court-seal",
@@ -326,19 +326,19 @@ export const wanbiNodes: Record<NodeId, WanbiNode> = {
       },
     ],
     subtitle: "趙廷夜議",
-    title: "進入節點：奉璧之前",
+    title: "奉璧之前",
   },
   "xianyang-audience": {
     availableCharacters: ["qinWang", "palaceAttendant", "qinHistorian"],
     background: sceneHall,
-    chapter: "History Node 02",
+    chapter: "第二幕",
     historicalReference:
       "秦王得璧後大喜，傳示美人與左右，卻始終不言交城。真正的線索藏在『怎麼對待這塊璧』而非他嘴上怎麼說。",
     id: "xianyang-audience",
     missionObjective: "在秦廷的失禮細節中抓出破綻，判定秦王是否真的想交城。",
     nodeSummary:
-      "章臺之上，眾目環伺。你已把和氏璧送到秦王眼前，而秦廷的第一個反應，決定你接下來是談判還是奪璧。",
-    pressureNote: "若你讓玉璧離手太久，下一秒它就不再屬於趙國。",
+      "章臺之上眾目環視。秦王接過和氏璧後的每個反應，都在告訴你這場交易靠不靠得住。",
+    pressureNote: "玉璧一旦離手太久，再想拿回來就難了。",
     probeTopics: [
       {
         id: "audience-attendant",
@@ -402,19 +402,19 @@ export const wanbiNodes: Record<NodeId, WanbiNode> = {
       },
     ],
     subtitle: "章臺觀璧",
-    title: "進入節點：看懂失禮",
+    title: "章臺觀璧",
   },
   "pillar-delay": {
     availableCharacters: ["qinHistorian", "zhaoCourier", "qinChamberlain"],
     background: sceneHall,
-    chapter: "History Node 03",
+    chapter: "第三幕",
     historicalReference:
       "相如既得璧，退而倚柱，並不是為了鬧劇，而是要把奪璧的成本抬高，再用禮制爭出時間。",
     id: "pillar-delay",
     missionObjective: "讓秦王不敢硬搶，並把危機轉成可利用的時間差。",
     nodeSummary:
-      "玉璧已回到你手中。此刻你背靠殿柱，侍衛尚未上前，殿內所有人都在等你下一句話是威脅、禮法，還是失控。",
-    pressureNote: "若你只會逞強而沒有後續安排，秦廷很快就會反應過來。",
+      "玉璧已回到你手中。你背靠殿柱，侍衛尚未上前，接下來每一句話都得為後路爭時間。",
+    pressureNote: "若只逞一時口舌，秦廷很快就會收緊局面。",
     probeTopics: [
       {
         id: "pillar-ritual",
@@ -456,7 +456,7 @@ export const wanbiNodes: Record<NodeId, WanbiNode> = {
       },
       {
         consequence: "你若真的擊碎和氏璧，雖保不讓秦得璧，卻也讓趙國國寶與外交目的一併毀掉。",
-        detail: "歷史上的藺相如靠的是控制局面，而不是衝動自毀。",
+        detail: "這麼做雖能毀璧，卻等於連趙國的後路也一併斷掉。",
         failStateId: "jadeDestroyed",
         id: "smash-for-real",
         label: "當庭真的碎璧",
@@ -467,7 +467,7 @@ export const wanbiNodes: Record<NodeId, WanbiNode> = {
       },
       {
         consequence: "你若硬要秦王立刻交城，只會逼對方用權勢與侍衛終結談判。",
-        detail: "當下最重要的不是在殿上贏辯論，而是把璧送回趙國。",
+        detail: "此時先要保住玉璧，再談後面的城池與名分。",
         failStateId: "guardsCloseIn",
         id: "demand-now",
         label: "逼秦王當場簽城",
@@ -478,19 +478,19 @@ export const wanbiNodes: Record<NodeId, WanbiNode> = {
       },
     ],
     subtitle: "倚柱相逼",
-    title: "進入節點：把時間搶回來",
+    title: "倚柱周旋",
   },
   "return-route": {
     availableCharacters: ["zhaoCourier", "palaceAttendant", "qinHistorian"],
     background: sceneRoad,
-    chapter: "History Node 04",
+    chapter: "第四幕",
     historicalReference:
       "史書寫藺相如使從者懷璧，從徑道亡，歸璧於趙。真正的完璧歸趙，發生在你敢不敢讓自己留在秦境周旋，而讓玉璧先走。",
     id: "return-route",
     missionObjective: "安排玉璧返趙，同時讓自己留在秦廷承受風暴，爭取安全脫身。",
     nodeSummary:
-      "舍館裡燈火已深。玉璧在你面前，從者在等命令。你現在做的不是漂亮發言，而是最後一次把生死與國寶分配到對的位置。",
-    pressureNote: "門禁與交班正在逼近。再不決斷，整個計畫就會被搜查與封鎖吞掉。",
+      "舍館已深夜。玉璧在案上，從者等你下令；接下來要分清誰留下周旋，誰帶璧先走。",
+    pressureNote: "門禁快換班了。再不下決定，整個安排都會來不及。",
     probeTopics: [
       {
         id: "route-gate",
@@ -544,7 +544,7 @@ export const wanbiNodes: Record<NodeId, WanbiNode> = {
       },
     ],
     subtitle: "歸璧之夜",
-    title: "進入節點：讓國寶先回家",
+    title: "歸璧之夜",
   },
 };
 
@@ -552,64 +552,64 @@ export const wanbiFailStates: Record<FailStateId, FailState> = {
   zhaoHumiliated: {
     historyReference: "藺相如真正高明之處，在於『赴秦而不辱君命』，不是提前退場。",
     id: "zhaoHumiliated",
-    lesson: "面對強國時，一味退避往往不是安全，而是把主動權送給對手。",
-    title: "趙國先示弱了",
+    lesson: "退避未必能自保，反而會先失主動。",
+    title: "趙國先失其勢",
     whyItFailed: "你還沒入局就拒絕談判，趙國在諸侯面前先失國體，秦國反而更容易借勢壓人。",
   },
   lostLeverage: {
     historyReference: "完璧歸趙的前提，是玉璧始終沒有完全脫離藺相如的控制。",
     id: "lostLeverage",
-    lesson: "不要在沒有驗證誠意前交出唯一籌碼。",
-    title: "籌碼先離手",
+    lesson: "未驗對方誠意前，不可先交出玉璧。",
+    title: "玉璧先離手",
     whyItFailed: "你用好意換善意，但強秦只會把這當成免費奪璧的機會。",
   },
   jadeSeized: {
     historyReference: "史書中的關鍵轉折，就是藺相如看出秦王只要璧、不談城。",
     id: "jadeSeized",
-    lesson: "一旦看出對方的真意，就必須立即奪回主導權。",
-    title: "和氏璧被扣下",
+    lesson: "看出對方無意交城後，就要立刻改變應對。",
+    title: "和氏璧落入秦廷",
     whyItFailed: "你讓玉璧在秦廷手中停留太久，等於默認對方可以先取寶、後講條件。",
   },
   courtOverrun: {
     historyReference: "歷史上的相如不是先斥責，而是先取回玉璧再逼對方承受風險。",
     id: "courtOverrun",
-    lesson: "空手的正義，在對方的主場只會變成冒進。",
-    title: "秦廷先動手了",
+    lesson: "在對方主場翻臉，先得握住自己手裡的籌碼。",
+    title: "秦廷先發制人",
     whyItFailed: "你在沒有握住玉璧時就翻臉，侍衛只需前進一步，趙國立刻兩失。",
   },
   jadeDestroyed: {
     historyReference: "相如以碎璧威逼，不是為了真碎；他的目標始終是『完璧』。",
     id: "jadeDestroyed",
-    lesson: "威脅是工具，不是終點。真正的勝利是把玉璧完整送回趙國。",
-    title: "你把勝機也一起砸碎了",
+    lesson: "威脅只為爭時間，不是要把玉璧真的毀掉。",
+    title: "玉璧碎於殿上",
     whyItFailed: "玉璧若真碎了，秦不得璧，但趙國也失去了國寶與外交成果。",
   },
   guardsCloseIn: {
     historyReference: "這段歷史的核心不是當場逼秦交城，而是以小勝換大局。",
     id: "guardsCloseIn",
-    lesson: "在權力不對等的場合，先求轉移風險，再求長線勝利。",
-    title: "你把對方逼成純武力回應",
+    lesson: "先保住玉璧，再談後面的城池與名分。",
+    title: "侍衛逼近",
     whyItFailed: "你在殿上逼秦王立即交城，等於逼他用侍衛而非協議來結束局面。",
   },
   searchedAtGate: {
     historyReference: "史書寫的是『使從者懷璧』，不是藺相如親自帶璧潛逃。",
     id: "searchedAtGate",
-    lesson: "真正的主事者，有時必須留下吸住風暴，讓關鍵物件先走。",
-    title: "你自己成了最醒目的目標",
+    lesson: "主事者有時要留下牽制，讓玉璧先走。",
+    title: "出關時遭盤查",
     whyItFailed: "秦廷第一個想搜的就是你本人，你帶著玉璧根本無法安然出境。",
   },
   escortBetrayal: {
     historyReference: "秦王從頭到尾沒有真的進入交城程序，拖延只會讓璧重新落回他手上。",
     id: "escortBetrayal",
-    lesson: "面對已經露出真意的對手，別把希望寄託在對方忽然變好。",
-    title: "你把玉璧留在錯的人手裡",
+    lesson: "既知對方無意交城，就不能把希望押在對方回心轉意。",
+    title: "玉璧再落秦手",
     whyItFailed: "你想等秦王改口，但對方只會趁你放鬆時重新控制和氏璧。",
   },
   timeExpired: {
     historyReference: "完璧歸趙不只是智計正確，更是每一步都得比秦廷快一瞬。",
     id: "timeExpired",
-    lesson: "在強敵主場，遲疑本身就是失敗條件。",
-    title: "秦廷先一步封死局面",
+    lesson: "在秦廷地盤上，慢一步就是失機。",
+    title: "局面被秦廷封死",
     whyItFailed: "你花了太多時間觀望，侍衛、門禁與朝議已經把所有出口封住。",
   },
 };
@@ -617,6 +617,6 @@ export const wanbiFailStates: Record<FailStateId, FailState> = {
 export const wanbiVictorySummary = {
   historicalReference:
     "史書最後落在一句最關鍵的行動上：藺相如使從者懷璧，從徑道亡，歸璧於趙。",
-  subtitle: "歷史節點已重演",
+  subtitle: "任務完成",
   title: "完璧歸趙",
 };
