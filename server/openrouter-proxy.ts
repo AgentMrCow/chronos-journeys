@@ -341,7 +341,7 @@ Answer only from this character's own knowledge, rank, motives, and emotional po
   ];
 
   const payload = await requestOpenRouter(env, {
-    max_tokens: 420,
+    max_tokens: 520,
     messages,
     model: config.chatModel,
     temperature: 0.72,
