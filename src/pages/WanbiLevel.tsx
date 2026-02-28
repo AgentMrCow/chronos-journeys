@@ -27,7 +27,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { AccessibilityProvider, useAccessibility } from "@/contexts/AccessibilityContext";
 import {
-  WANBI_TOTAL_TIME,
   type CharacterId,
   type ClueId,
   type FailStateId,
@@ -81,7 +80,7 @@ interface SceneHotspot {
   characterId?: CharacterId;
   description: string;
   label: string;
-  tone: "gold" | "jade" | "vermillion";
+  tone: "gold" | "jade";
   type: "action" | "character";
   x: string;
   y: string;
@@ -129,7 +128,7 @@ const sceneHotspots: Record<NodeId, SceneHotspot[]> = {
       actionId: "refuse-mission",
       description: "閉門拒秦",
       label: "退守",
-      tone: "vermillion",
+      tone: "gold",
       type: "action",
       x: "31%",
       y: "78%",
@@ -138,7 +137,7 @@ const sceneHotspots: Record<NodeId, SceneHotspot[]> = {
       actionId: "gift-jade",
       description: "不驗誠意先獻璧",
       label: "先獻璧",
-      tone: "vermillion",
+      tone: "gold",
       type: "action",
       x: "76%",
       y: "78%",
@@ -185,7 +184,7 @@ const sceneHotspots: Record<NodeId, SceneHotspot[]> = {
       actionId: "public-accusation",
       description: "空手當庭翻臉",
       label: "當庭斥責",
-      tone: "vermillion",
+      tone: "gold",
       type: "action",
       x: "28%",
       y: "75%",
@@ -194,7 +193,7 @@ const sceneHotspots: Record<NodeId, SceneHotspot[]> = {
       actionId: "hand-over",
       description: "任由秦廷把玩",
       label: "放手",
-      tone: "vermillion",
+      tone: "gold",
       type: "action",
       x: "71%",
       y: "76%",
@@ -241,7 +240,7 @@ const sceneHotspots: Record<NodeId, SceneHotspot[]> = {
       actionId: "smash-for-real",
       description: "真的碎璧",
       label: "碎璧",
-      tone: "vermillion",
+      tone: "gold",
       type: "action",
       x: "40%",
       y: "72%",
@@ -250,7 +249,7 @@ const sceneHotspots: Record<NodeId, SceneHotspot[]> = {
       actionId: "demand-now",
       description: "逼秦王立刻交城",
       label: "逼城",
-      tone: "vermillion",
+      tone: "gold",
       type: "action",
       x: "61%",
       y: "71%",
@@ -279,7 +278,7 @@ const sceneHotspots: Record<NodeId, SceneHotspot[]> = {
       actionId: "trust-qin",
       description: "把命運交回秦廷",
       label: "留璧待命",
-      tone: "vermillion",
+      tone: "gold",
       type: "action",
       x: "22%",
       y: "79%",
@@ -288,7 +287,7 @@ const sceneHotspots: Record<NodeId, SceneHotspot[]> = {
       actionId: "carry-yourself",
       description: "親自帶璧闖關",
       label: "親自出城",
-      tone: "vermillion",
+      tone: "gold",
       type: "action",
       x: "48%",
       y: "81%",
@@ -316,6 +315,8 @@ const buildFallbackSummary = (args: {
   stats: MissionStats;
   timeRemaining: number;
 }): DirectorSummary => {
+  const nodeTimeLimit = wanbiNodes[args.currentNodeId].timeLimit;
+  const timeWarningThreshold = Math.max(12, Math.ceil(nodeTimeLimit * 0.3));
   const cluePressure =
     args.clueIds.length >= 4 ? "你已掌握幾個關鍵破綻。" : "還需要補幾條能站得住的證據。";
   const average = (args.stats.composure + args.stats.insight + args.stats.leverage) / 3;
@@ -334,7 +335,7 @@ const buildFallbackSummary = (args: {
     grade,
     judgement: `眼下局勢接在「${latestAction}」之後。${cluePressure}`,
     nextStep:
-      args.timeRemaining < 45
+      args.timeRemaining <= timeWarningThreshold
         ? "剩下的時間不多了，別再觀望，先做最能改變局面的那一步。"
         : `下一步宜先補強${weakest}，再把本章線索補齊。`,
     strength:
@@ -345,7 +346,7 @@ const buildFallbackSummary = (args: {
         : "你還撐得住場面，秦廷暫時不敢硬來。",
     title: `${wanbiNodes[args.currentNodeId].chapter} · 局勢評估`,
     warning:
-      args.timeRemaining < 45
+      args.timeRemaining <= timeWarningThreshold
         ? "再拖下去，門禁和侍衛會先收緊。"
         : `若${weakest}再失手，下一步就容易出錯。`,
   };
@@ -386,6 +387,9 @@ const applyStatDelta = (current: MissionStats, delta?: Partial<MissionStats>): M
   leverage: clamp(current.leverage + (delta?.leverage || 0)),
 });
 
+const getNodeTimeLimit = (nodeId: NodeId) => wanbiNodes[nodeId].timeLimit;
+const CUSTOM_QUESTION_TIME_COST = 4;
+
 const GameEngine = () => {
   const navigate = useNavigate();
   const { speak, ttsEnabled } = useAccessibility();
@@ -394,7 +398,7 @@ const GameEngine = () => {
   const [completedNodeIds, setCompletedNodeIds] = useState<NodeId[]>([]);
   const [discoveredClueIds, setDiscoveredClueIds] = useState<ClueId[]>([]);
   const [usedTopicIds, setUsedTopicIds] = useState<string[]>([]);
-  const [timeRemaining, setTimeRemaining] = useState(WANBI_TOTAL_TIME);
+  const [timeRemaining, setTimeRemaining] = useState(getNodeTimeLimit("zhao-court"));
   const [stats, setStats] = useState<MissionStats>(wanbiInitialStats);
   const [selectedCharacterId, setSelectedCharacterId] = useState<CharacterId>(
     wanbiNodes["zhao-court"].availableCharacters[0],
@@ -406,16 +410,17 @@ const GameEngine = () => {
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState<Record<string, ChatEntry[]>>({});
   const [questionDraft, setQuestionDraft] = useState("");
+  const [chatError, setChatError] = useState<string | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [directorSummary, setDirectorSummary] = useState<DirectorSummary>(() =>
-    buildFallbackSummary({
-      actionLog: [],
-      clueIds: [],
-      currentNodeId: "zhao-court",
-      stats: wanbiInitialStats,
-      timeRemaining: WANBI_TOTAL_TIME,
-    }),
+      buildFallbackSummary({
+        actionLog: [],
+        clueIds: [],
+        currentNodeId: "zhao-court",
+        stats: wanbiInitialStats,
+        timeRemaining: getNodeTimeLimit("zhao-court"),
+      }),
   );
   const [summaryMode, setSummaryMode] = useState<"ai" | "fallback">("fallback");
   const [actionLog, setActionLog] = useState<ActionLogEntry[]>([]);
@@ -441,8 +446,10 @@ const GameEngine = () => {
   const displayedImageClue = getCurrentNodeImageClue(currentNodeId, discoveredClueIds);
   const displayedImageState = displayedImageClue ? generatedImages[displayedImageClue.id] : undefined;
   const hasOpenRouter = runtimeApiKey.trim().length > 0;
-  const timerProgress = (timeRemaining / WANBI_TOTAL_TIME) * 100;
-  const timerCritical = timeRemaining <= 45;
+  const currentNodeTimeLimit = currentNode.timeLimit;
+  const timerWarningThreshold = Math.max(12, Math.ceil(currentNodeTimeLimit * 0.3));
+  const timerProgress = (timeRemaining / currentNodeTimeLimit) * 100;
+  const timerCritical = timeRemaining <= timerWarningThreshold;
   const isClockPaused = chatLoading || summaryLoading || phase !== "playing";
 
   const resetMission = useCallback(() => {
@@ -451,7 +458,7 @@ const GameEngine = () => {
     setCompletedNodeIds([]);
     setDiscoveredClueIds([]);
     setUsedTopicIds([]);
-    setTimeRemaining(WANBI_TOTAL_TIME);
+    setTimeRemaining(getNodeTimeLimit("zhao-court"));
     setStats(wanbiInitialStats);
     setSelectedCharacterId(wanbiNodes["zhao-court"].availableCharacters[0]);
     setSelectedActionId(wanbiNodes["zhao-court"].strategicActions[0]?.id ?? null);
@@ -459,6 +466,7 @@ const GameEngine = () => {
     setIsConsoleOpen(false);
     setChatHistory({});
     setQuestionDraft("");
+    setChatError(null);
     setChatLoading(false);
     setSummaryLoading(false);
     setDirectorSummary(
@@ -467,7 +475,7 @@ const GameEngine = () => {
         clueIds: [],
         currentNodeId: "zhao-court",
         stats: wanbiInitialStats,
-        timeRemaining: WANBI_TOTAL_TIME,
+        timeRemaining: getNodeTimeLimit("zhao-court"),
       }),
     );
     setSummaryMode("fallback");
@@ -633,7 +641,7 @@ const GameEngine = () => {
       clueIds: [],
       currentNodeId: "zhao-court",
       stats: wanbiInitialStats,
-      timeRemaining: WANBI_TOTAL_TIME,
+      timeRemaining: getNodeTimeLimit("zhao-court"),
     });
   };
 
@@ -686,6 +694,7 @@ const GameEngine = () => {
       text: topic.prompt,
     });
 
+    setChatError(null);
     setChatLoading(true);
     try {
       const reply = hasOpenRouter
@@ -715,13 +724,16 @@ const GameEngine = () => {
       if (ttsEnabled) {
         speak(reply || topic.fallbackReply, { rate: 0.97 });
       }
-    } catch {
+    } catch (error) {
       appendChatEntry(topic.characterId, {
         id: createId(),
         role: "assistant",
         source: "fallback",
         text: topic.fallbackReply,
       });
+      setChatError(
+        error instanceof Error ? `對話服務暫時無法使用：${error.message}` : "對話服務暫時無法使用。",
+      );
     } finally {
       setChatLoading(false);
       if (remainingAfterAction <= 0) {
@@ -741,7 +753,7 @@ const GameEngine = () => {
   const handleCustomQuestion = async () => {
     if (phase !== "playing" || chatLoading || !questionDraft.trim()) return;
     const prompt = questionDraft.trim();
-    const remainingAfterAction = applyTimeCost(6);
+    const remainingAfterAction = applyTimeCost(CUSTOM_QUESTION_TIME_COST);
     setPanelTab("conversation");
     appendChatEntry(selectedCharacterId, {
       id: createId(),
@@ -750,6 +762,9 @@ const GameEngine = () => {
       text: prompt,
     });
     setQuestionDraft("");
+    setChatError(
+      hasOpenRouter ? null : "目前未連上對話服務。請確認已設定 VITE_OPENROUTER_API_KEY，並重新啟動開發伺服器。",
+    );
     setChatLoading(true);
 
     try {
@@ -784,7 +799,7 @@ const GameEngine = () => {
       if (ttsEnabled) {
         speak(reply, { rate: 0.97 });
       }
-    } catch {
+    } catch (error) {
       appendChatEntry(selectedCharacterId, {
         id: createId(),
         role: "assistant",
@@ -795,6 +810,9 @@ const GameEngine = () => {
           selectedCharacterId,
         }),
       });
+      setChatError(
+        error instanceof Error ? `對話服務暫時無法使用：${error.message}` : "對話服務暫時無法使用。",
+      );
     } finally {
       setChatLoading(false);
       if (remainingAfterAction <= 0) {
@@ -829,6 +847,18 @@ const GameEngine = () => {
     setActionLog(nextLog);
     setPanelTab("actions");
 
+    if (remainingAfterAction <= 0) {
+      await refreshDirectorSummary({
+        actionLog: nextLog,
+        clueIds: discoveredClueIds,
+        currentNodeId,
+        stats: nextStats,
+        timeRemaining: remainingAfterAction,
+      });
+      failMission("timeExpired");
+      return;
+    }
+
     if (action.failStateId) {
       await refreshDirectorSummary({
         actionLog: nextLog,
@@ -857,14 +887,16 @@ const GameEngine = () => {
       const nextCompleted = completedNodeIds.includes(currentNodeId)
         ? completedNodeIds
         : [...completedNodeIds, currentNodeId];
+      const nextNodeTimeLimit = getNodeTimeLimit(action.nextNodeId);
       setCompletedNodeIds(nextCompleted);
       setCurrentNodeId(action.nextNodeId);
+      setTimeRemaining(nextNodeTimeLimit);
       await refreshDirectorSummary({
         actionLog: nextLog,
         clueIds: discoveredClueIds,
         currentNodeId: action.nextNodeId,
         stats: nextStats,
-        timeRemaining: remainingAfterAction,
+        timeRemaining: nextNodeTimeLimit,
       });
       return;
     }
@@ -882,9 +914,7 @@ const GameEngine = () => {
     const toneClasses =
       hotspot.tone === "gold"
         ? "border-gold/60 bg-gold/15 text-gold shadow-gold/20"
-        : hotspot.tone === "jade"
-        ? "border-jade/60 bg-jade/15 text-jade shadow-jade/20"
-        : "border-vermillion/60 bg-vermillion/15 text-vermillion shadow-vermillion/20";
+        : "border-jade/60 bg-jade/15 text-jade shadow-jade/20";
 
     if (hotspot.type === "character" && hotspot.characterId) {
       const character = wanbiCharacters[hotspot.characterId];
@@ -1016,6 +1046,9 @@ const GameEngine = () => {
                     className={`h-1.5 w-28 ${timerCritical ? "[&>div]:bg-vermillion" : "[&>div]:bg-gold"}`}
                   />
                 </div>
+                <span className="rounded-full border border-border/70 bg-background/40 px-3 py-2 text-xs text-muted-foreground">
+                  本幕 {currentNodeTimeLimit}s
+                </span>
                 <span className="rounded-full border border-border/70 bg-background/40 px-3 py-2 text-xs text-jade">
                   洞察 {stats.insight}
                 </span>
@@ -1047,7 +1080,13 @@ const GameEngine = () => {
             ))}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 z-30 p-3 md:bottom-4 md:left-auto md:right-4 md:w-[min(540px,calc(100vw-2rem))] md:p-0">
+        <div
+          className={`absolute bottom-0 left-0 right-0 z-30 p-3 md:bottom-4 md:left-auto md:right-4 md:p-0 ${
+            isConsoleOpen
+              ? "md:w-[min(920px,calc(100vw-2rem))]"
+              : "md:w-[min(540px,calc(100vw-2rem))]"
+          }`}
+        >
           <div className="rounded-[28px] border border-gold/20 bg-background/45 p-3 backdrop-blur-2xl">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap gap-2">
@@ -1092,7 +1131,7 @@ const GameEngine = () => {
             {isConsoleOpen && (
               <div className="mt-3 max-h-[42vh] overflow-y-auto pr-1">
                 {panelTab === "actions" && selectedAction && (
-                  <div className="grid h-full gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+                  <div className="grid h-full gap-4 xl:grid-cols-[0.9fr_1.1fr]">
                     <div className="rounded-[26px] border border-border/70 bg-background/45 p-5">
                       <p className="mb-2 text-xs uppercase tracking-[0.28em] text-gold/70">
                         目前選項
@@ -1109,14 +1148,9 @@ const GameEngine = () => {
                         <span className="rounded-full border border-border px-3 py-1">
                           時間消耗 -{selectedAction.timeCost}s
                         </span>
-                        {selectedAction.failStateId && (
-                          <span className="rounded-full border border-destructive/30 px-3 py-1 text-destructive">
-                            失敗風險高
-                          </span>
-                        )}
                         {selectedAction.winMission && (
                           <span className="rounded-full border border-jade/30 px-3 py-1 text-jade">
-                          關鍵行動
+                            關鍵行動
                           </span>
                         )}
                       </div>
@@ -1189,9 +1223,9 @@ const GameEngine = () => {
                 )}
 
               {panelTab === "conversation" && (
-                <div className="grid h-full gap-4 lg:grid-cols-[0.88fr_1.12fr]">
+                <div className="grid h-full gap-4 xl:grid-cols-[0.88fr_1.12fr]">
                   <div className="rounded-[26px] border border-border/70 bg-background/45 p-5">
-                    <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                    <div className="mb-4 grid gap-2 sm:grid-cols-2 2xl:grid-cols-2">
                       {currentNode.availableCharacters.map((characterId) => {
                         const character = wanbiCharacters[characterId];
                         const selected = selectedCharacterId === characterId;
@@ -1307,12 +1341,15 @@ const GameEngine = () => {
                         placeholder="想問什麼，就直接開口。"
                         className="min-h-[96px] rounded-2xl bg-background/65"
                       />
+                      {chatError && (
+                        <p className="text-sm text-muted-foreground">{chatError}</p>
+                      )}
                       <button
                         onClick={() => void handleCustomQuestion()}
                         disabled={phase !== "playing" || chatLoading || !questionDraft.trim()}
                         className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {chatLoading ? "對方回話中…" : "發問 -6s"}
+                        {chatLoading ? "對方回話中…" : `發問 -${CUSTOM_QUESTION_TIME_COST}s`}
                       </button>
                     </div>
                   </div>
@@ -1320,7 +1357,7 @@ const GameEngine = () => {
               )}
 
               {panelTab === "clues" && (
-                <div className="grid h-full gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+                <div className="grid h-full gap-4 xl:grid-cols-[0.9fr_1.1fr]">
                   <div className="rounded-[26px] border border-border/70 bg-background/45 p-5">
                     <div className="mb-3 flex items-center gap-2 text-gold">
                       <BookOpen className="h-4 w-4" />
@@ -1409,7 +1446,7 @@ const GameEngine = () => {
               )}
 
               {panelTab === "director" && (
-                <div className="grid h-full gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+                <div className="grid h-full gap-4 xl:grid-cols-[0.9fr_1.1fr]">
                   <div className="rounded-[26px] border border-border/70 bg-background/45 p-5">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>

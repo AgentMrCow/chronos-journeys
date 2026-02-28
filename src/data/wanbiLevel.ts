@@ -103,6 +103,7 @@ export interface WanbiNode {
   referenceSource: string;
   strategicActions: StrategicAction[];
   subtitle: string;
+  timeLimit: number;
   title: string;
 }
 
@@ -113,8 +114,6 @@ export interface FailState {
   title: string;
   whyItFailed: string;
 }
-
-export const WANBI_TOTAL_TIME = 180;
 
 export const wanbiInitialStats: MissionStats = {
   composure: 58,
@@ -326,6 +325,7 @@ export const wanbiNodes: Record<NodeId, WanbiNode> = {
       },
     ],
     subtitle: "趙廷夜議",
+    timeLimit: 120,
     title: "奉璧之前",
   },
   "xianyang-audience": {
@@ -402,6 +402,7 @@ export const wanbiNodes: Record<NodeId, WanbiNode> = {
       },
     ],
     subtitle: "章臺觀璧",
+    timeLimit: 135,
     title: "章臺觀璧",
   },
   "pillar-delay": {
@@ -478,6 +479,7 @@ export const wanbiNodes: Record<NodeId, WanbiNode> = {
       },
     ],
     subtitle: "倚柱相逼",
+    timeLimit: 110,
     title: "倚柱周旋",
   },
   "return-route": {
@@ -544,6 +546,7 @@ export const wanbiNodes: Record<NodeId, WanbiNode> = {
       },
     ],
     subtitle: "歸璧之夜",
+    timeLimit: 95,
     title: "歸璧之夜",
   },
 };
