@@ -1,4 +1,4 @@
-import { executeOpenRouterAction, isOpenRouterAction } from "../../server/openrouter-proxy.js";
+import { executeOpenRouterAction, isOpenRouterAction } from "./_shared.ts";
 
 const readJsonBody = async (req: { body?: unknown }) => {
   if (typeof req.body === "string" && req.body.length > 0) {

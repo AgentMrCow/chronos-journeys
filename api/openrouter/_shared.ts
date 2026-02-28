@@ -248,8 +248,10 @@ const normaliseMessageText = (
 const extractImageUrl = (images: OpenRouterImagePart[] | undefined): string | undefined => {
   if (!images || images.length === 0) return undefined;
 
-  return images.find((image) => image.image_url?.url || image.imageUrl?.url)?.image_url?.url ||
-    images.find((image) => image.image_url?.url || image.imageUrl?.url)?.imageUrl?.url;
+  return (
+    images.find((image) => image.image_url?.url || image.imageUrl?.url)?.image_url?.url ||
+    images.find((image) => image.image_url?.url || image.imageUrl?.url)?.imageUrl?.url
+  );
 };
 
 const getRuntimeConfig = (env: OpenRouterServerEnv) => {
@@ -331,12 +333,12 @@ Do not restate the entire situation unless the player asks.
 Answer only from this character's own knowledge, rank, motives, and emotional position.`,
     },
     ...input.history.map((entry) => ({
-      role: entry.role,
       content: entry.text,
+      role: entry.role,
     })),
     {
-      role: "user",
       content: input.prompt,
+      role: "user",
     },
   ];
 
@@ -358,31 +360,29 @@ const handleDirectorSummary = async (input: DirectorSummaryInput, env: OpenRoute
     max_tokens: 260,
     messages: [
       {
-        role: "system",
         content:
           "You are 司馬遷 serving as a cinematic mission director. Evaluate the player's performance as Lin Xiangru. Respond only with JSON matching the schema. Write all fields in Traditional Chinese except the grade, which should be one of S, A, B, C, D.",
+        role: "system",
       },
       {
-        role: "user",
         content: `Current node: ${input.currentNode}
 Time remaining: ${input.timeRemaining}
 Stats: insight ${input.stats.insight}, leverage ${input.stats.leverage}, composure ${input.stats.composure}
 Clues: ${input.clues.join("；") || "none"}
 Mission log: ${input.missionLog.join("；") || "mission just started"}`,
+        role: "user",
       },
     ],
     model: config.chatModel,
     response_format: {
-      type: "json_schema",
       json_schema: {
         name: "director_summary",
-        strict: true,
         schema: {
-          type: "object",
+          additionalProperties: false,
           properties: {
             grade: {
-              type: "string",
               enum: ["S", "A", "B", "C", "D"],
+              type: "string",
             },
             judgement: { type: "string" },
             nextStep: { type: "string" },
@@ -391,9 +391,11 @@ Mission log: ${input.missionLog.join("；") || "mission just started"}`,
             warning: { type: "string" },
           },
           required: ["grade", "judgement", "nextStep", "strength", "title", "warning"],
-          additionalProperties: false,
+          type: "object",
         },
+        strict: true,
       },
+      type: "json_schema",
     },
     temperature: 0.4,
   });
@@ -411,12 +413,11 @@ const handleFinalEvaluation = async (
     max_tokens: 520,
     messages: [
       {
-        role: "system",
         content:
           "You are 司馬遷 writing the final judgement on a completed playthrough of 完璧歸趙. Read the player's full record, especially every question they asked. Treat those questions as evidence of what the player noticed, doubted, feared, or understood. Respond only with JSON matching the schema. Write all fields in Traditional Chinese except the grade, which should be one of S, A, B, C, D. Do not use modern game jargon.",
+        role: "system",
       },
       {
-        role: "user",
         content: `Result: ${input.outcome}
 Ending title: ${input.endingTitle}
 Current node: ${input.currentNode}
@@ -425,21 +426,20 @@ Stats: insight ${input.stats.insight}, leverage ${input.stats.leverage}, composu
 Clues: ${input.clues.join("；") || "none"}
 Mission log: ${input.missionLog.join("；") || "mission just started"}
 Questions asked: ${input.questionsAsked.join("；") || "none"}`,
+        role: "user",
       },
     ],
     model: config.chatModel,
     response_format: {
-      type: "json_schema",
       json_schema: {
         name: "final_evaluation",
-        strict: true,
         schema: {
-          type: "object",
+          additionalProperties: false,
           properties: {
             closing: { type: "string" },
             grade: {
-              type: "string",
               enum: ["S", "A", "B", "C", "D"],
+              type: "string",
             },
             questionReading: { type: "string" },
             strategyReview: { type: "string" },
@@ -447,9 +447,11 @@ Questions asked: ${input.questionsAsked.join("；") || "none"}`,
             verdict: { type: "string" },
           },
           required: ["closing", "grade", "questionReading", "strategyReview", "title", "verdict"],
-          additionalProperties: false,
+          type: "object",
         },
+        strict: true,
       },
+      type: "json_schema",
     },
     temperature: 0.45,
   });
@@ -471,12 +473,12 @@ const handleClueImage = async (
     max_tokens: 120,
     messages: [
       {
-        role: "user",
         content: input.prompt,
+        role: "user",
       },
     ],
-    modalities: ["image", "text"],
     model: config.imageModel,
+    modalities: ["image", "text"],
     stream: false,
     temperature: 0.7,
   });

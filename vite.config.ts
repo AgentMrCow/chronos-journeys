@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import { executeOpenRouterAction, isOpenRouterAction } from "./server/openrouter-proxy";
+import { executeOpenRouterAction, isOpenRouterAction } from "./api/openrouter/_shared";
 
 const readJsonBody = async (req: IncomingMessage) => {
   const chunks: Buffer[] = [];
