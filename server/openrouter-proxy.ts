@@ -66,6 +66,7 @@ interface OpenRouterResponse {
 }
 
 interface OpenRouterServerEnv {
+  [key: string]: string | undefined;
   OPENROUTER_API_KEY?: string;
   OPENROUTER_APP_NAME?: string;
   OPENROUTER_CHAT_MODEL?: string;
@@ -113,7 +114,7 @@ const asHistory = (value: unknown) => {
       throw new Error("Invalid history");
     }
 
-    return { role, text };
+    return { role: role as "assistant" | "user", text };
   });
 };
 
