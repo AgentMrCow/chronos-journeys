@@ -1,9 +1,8 @@
-// Unused backup of the original Mianchi level page.
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Volume2, Star, BookOpen } from "lucide-react";
-import { mianchiScenes, type GameScene, type Choice } from "@/data/mianchiLevel";
+import { wanbiScenes, type GameScene, type Choice } from "@/data/wanbiLevel";
 import { AccessibilityProvider, useAccessibility } from "@/contexts/AccessibilityContext";
 import AccessibilityPanel from "@/components/AccessibilityPanel";
 
@@ -18,7 +17,7 @@ const GameEngine = () => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [sceneTransition, setSceneTransition] = useState(false);
 
-  const scene = mianchiScenes[sceneId];
+  const scene = wanbiScenes[sceneId];
 
   const goToScene = useCallback(
     (id: string) => {
@@ -155,10 +154,10 @@ const GameEngine = () => {
                   歷史小知識
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  「澠池之會」出自《史記·廉頗藺相如列傳》，是司馬遷記錄的著名外交故事。藺相如憑智勇保全趙國尊嚴，被封為上卿，官位在廉頗之上，後來引發了「負荊請罪」的故事。
+                  「完璧歸趙」出自《史記·廉頗藺相如列傳》。秦王曾聲稱願以十五城換取趙國的和氏璧，藺相如看穿其無意交城，於是設法保住玉璧並將其完整送回趙國，也因此聲名大振。
                 </p>
                 <p className="mt-1 text-xs text-mist">
-                  The Meeting at Mianchi is from Sima Qian's "Records of the Grand Historian." Lin Xiangru's bravery led to his promotion above Lian Po, which later inspired the famous story of "Carrying Thorns to Apologize."
+                  "Return the Jade to Zhao" comes from Sima Qian's Records of the Grand Historian. The King of Qin claimed he would trade fifteen cities for Zhao's He Shi Bi, but Lin Xiangru saw through the deception and returned the jade intact, earning lasting fame.
                 </p>
               </div>
 
@@ -332,10 +331,10 @@ const GameEngine = () => {
   );
 };
 
-const MianchiLevel = () => (
+const WanbiLevel = () => (
   <AccessibilityProvider>
     <GameEngine />
   </AccessibilityProvider>
 );
 
-export default MianchiLevel;
+export default WanbiLevel;

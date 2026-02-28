@@ -8,16 +8,16 @@ import { useAccessibility } from "@/contexts/AccessibilityContext";
 
 const eras = [
   {
-    id: "mianchi",
-    title: "戰國·澠池之會",
-    subtitle: "Meeting at Mianchi",
-    period: "279 BC",
+    id: "wanbi",
+    title: "戰國·完璧歸趙",
+    subtitle: "Return the Jade to Zhao",
+    period: "283 BC",
     image: eraQin,
-    description: "化身藺相如謀士，以智勇保全趙國尊嚴",
-    descEn: "Become Lin Xiangru's advisor — protect Zhao's honor with wit and courage",
+    description: "化身藺相如謀士，護住和氏璧，守住趙國尊嚴",
+    descEn: "Become Lin Xiangru's advisor — protect the He Shi Bi and Zhao's honor",
     difficulty: "★★☆",
     status: "available",
-    route: "/play/mianchi",
+    route: "/play/wanbi",
   },
   {
     id: "spring-autumn",

@@ -1,0 +1,382 @@
+import charLinxiangru from "@/assets/char-linxiangru.jpg";
+import charQinwang from "@/assets/char-qinwang.jpg";
+import charZhaowang from "@/assets/char-zhaowang.jpg";
+import sceneHall from "@/assets/scene-mianchi-hall.jpg";
+import sceneCamp from "@/assets/scene-camp.jpg";
+import sceneRoad from "@/assets/scene-road.jpg";
+
+export interface Choice {
+  text: string;
+  textEn: string;
+  nextScene: string;
+  points: number;
+  feedback: string;
+  feedbackEn: string;
+}
+
+export interface GameScene {
+  id: string;
+  background: string;
+  title: string;
+  titleEn: string;
+  narration: string;
+  narrationEn: string;
+  dialogues: {
+    speaker: string;
+    speakerEn: string;
+    avatar: string;
+    text: string;
+    textEn: string;
+    emotion: string;
+    hint: string;
+    hintEn: string;
+  }[];
+  puzzle?: {
+    question: string;
+    questionEn: string;
+    choices: Choice[];
+  };
+  nextScene?: string; // auto-advance if no puzzle
+}
+
+export const characters = {
+  linxiangru: { name: "藺相如", nameEn: "Lin Xiangru", avatar: charLinxiangru },
+  qinwang: { name: "秦王", nameEn: "King of Qin", avatar: charQinwang },
+  zhaowang: { name: "趙王", nameEn: "King of Zhao", avatar: charZhaowang },
+};
+
+export const wanbiScenes: Record<string, GameScene> = {
+  // Scene 1: Prologue - Zhao court
+  intro: {
+    id: "intro",
+    background: sceneCamp,
+    title: "第一幕：秦使求璧",
+    titleEn: "Act 1: Qin Demands the Jade",
+    narration:
+      "公元前283年，秦王聽聞趙國藏有無價之寶和氏璧，聲稱願以十五座城池交換。趙王既心動又懷疑秦國失信。你穿越至此，化身為藺相如的謀士，與他共商對策。",
+    narrationEn:
+      "283 BC. The King of Qin covets Zhao's priceless He Shi Bi and claims he will trade fifteen cities for it. The King of Zhao is tempted, but doubts Qin's sincerity. You have time-traveled here as Lin Xiangru's advisor.",
+    dialogues: [
+      {
+        speaker: "趙王",
+        speakerEn: "King of Zhao",
+        avatar: charZhaowang,
+        text: "秦王願以十五城易和氏璧，寡人恐其空言欺趙，卻又不便輕拒。卿以為如何？",
+        textEn: "The King of Qin offers fifteen cities for the He Shi Bi. I fear he speaks empty words, yet refusing outright may offend him. What say you?",
+        emotion: "😰 憂慮 Worried",
+        hint: "趙王擔心秦國想騙璧，不是真心割城",
+        hintEn: "The King fears Qin only wants the jade and not a real exchange",
+      },
+      {
+        speaker: "藺相如",
+        speakerEn: "Lin Xiangru",
+        avatar: charLinxiangru,
+        text: "秦強而趙弱，不可失禮於諸侯。臣願奉璧入秦；秦若誠意予城，璧可與之；若其無信，臣必完璧歸趙！",
+        textEn: "Qin is strong and Zhao is weak. We cannot appear discourteous. Let me carry the jade to Qin. If Qin is sincere, they may have it. If not, I will return it intact to Zhao!",
+        emotion: "😤 堅定 Resolute",
+        hint: "藺相如主張應對秦國，但必須保留退路",
+        hintEn: "Lin Xiangru believes Zhao must respond, but with safeguards",
+      },
+    ],
+    puzzle: {
+      question: "你作為謀士，會如何建議趙王？",
+      questionEn: "As an advisor, what would you suggest to the King?",
+      choices: [
+        {
+          text: "命藺相如奉璧入秦，先觀察秦王是否真有割城誠意",
+          textEn: "Send Lin Xiangru with the jade and verify whether Qin truly intends to cede the cities",
+          nextScene: "journey",
+          points: 30,
+          feedback: "✅ 明智之舉！既不失禮，也為趙國留下了迴旋空間。",
+          feedbackEn: "Wise! Zhao remains courteous while preserving room to maneuver.",
+        },
+        {
+          text: "直接拒絕秦王，表明和氏璧絕不外借",
+          textEn: "Reject Qin outright and declare the jade will never leave Zhao",
+          nextScene: "journey",
+          points: 5,
+          feedback: "⚠️ 雖可保璧一時，卻容易讓秦國抓住藉口發難。",
+          feedbackEn: "This protects the jade for now, but gives Qin a pretext to escalate.",
+        },
+        {
+          text: "立刻把和氏璧送去，先換取秦王歡心再說",
+          textEn: "Hand over the jade immediately and win Qin's favor first",
+          nextScene: "journey",
+          points: 15,
+          feedback: "🤔 這樣太冒險了，一旦秦王翻臉，趙國將璧城兩失。",
+          feedbackEn: "Too risky. If Qin betrays Zhao, you lose both the jade and the bargaining position.",
+        },
+      ],
+    },
+  },
+
+  // Scene 2: Journey to Qin
+  journey: {
+    id: "journey",
+    background: sceneRoad,
+    title: "第二幕：奉璧入秦",
+    titleEn: "Act 2: Bearing the Jade to Qin",
+    narration:
+      "藺相如奉命攜和氏璧西入秦境。一路上，他反覆推演秦王可能使出的手段，準備在秦廷之上見機行事。",
+    narrationEn:
+      "Lin Xiangru is entrusted with the He Shi Bi and travels west into Qin territory. Along the way, he prepares for every trick the King of Qin might attempt at court.",
+    dialogues: [
+      {
+        speaker: "趙王",
+        speakerEn: "King of Zhao",
+        avatar: charZhaowang,
+        text: "相如，此行入秦，重在保璧與保國體。若秦王失信，卿當如何？",
+        textEn: "Xiangru, this mission is about protecting both the jade and Zhao's dignity. If Qin breaks its word, what will you do?",
+        emotion: "😟 鄭重 Concerned",
+        hint: "趙王要確認藺相如已有應變之策",
+        hintEn: "The King wants to know whether Lin Xiangru has a fallback plan",
+      },
+      {
+        speaker: "藺相如",
+        speakerEn: "Lin Xiangru",
+        avatar: charLinxiangru,
+        text: "臣觀秦王貪而少信，必先察其禮數。若見其無意交城，臣便設法取回玉璧，不使趙國受欺。",
+        textEn: "I believe the King of Qin is greedy and untrustworthy. I will judge his sincerity first. If he never means to hand over the cities, I will recover the jade and ensure Zhao is not deceived.",
+        emotion: "🧠 沉著 Composed",
+        hint: "藺相如的關鍵不是硬碰硬，而是先判斷秦王真假",
+        hintEn: "Lin Xiangru's strategy is to test Qin's sincerity before making a move",
+      },
+    ],
+    puzzle: {
+      question: "秦王若急著索璧，卻始終不提十五城，最合理的判斷是什麼？",
+      questionEn: "If the King of Qin keeps demanding the jade but never mentions the fifteen cities, what is the most reasonable conclusion?",
+      choices: [
+        {
+          text: "秦王多半只想奪璧，並無真心割城",
+          textEn: "Qin most likely wants only the jade and never truly intends to cede the cities",
+          nextScene: "banquet_start",
+          points: 25,
+          feedback: "✅ 正確！這正是藺相如入秦後迅速察覺的危機。",
+          feedbackEn: "Correct. This is exactly the danger Lin Xiangru detects in Qin.",
+        },
+        {
+          text: "秦王只是忘了，等他高興了自然會給城",
+          textEn: "The King of Qin has simply forgotten; once pleased, he will surely hand over the cities",
+          nextScene: "banquet_start",
+          points: 0,
+          feedback: "❌ 太天真了。面對強秦，不能把國家命運寄託在對方善意上。",
+          feedbackEn: "Too naive. Zhao cannot stake its fate on Qin's goodwill.",
+        },
+        {
+          text: "既然入了秦境，就應立即交璧以保平安",
+          textEn: "Since you are already in Qin territory, surrender the jade at once to stay safe",
+          nextScene: "banquet_start",
+          points: 0,
+          feedback: "❌ 交出和氏璧並不能保證安全，反而會讓趙國徹底失去籌碼。",
+          feedbackEn: "Wrong. Giving up the jade would not ensure safety; it would destroy Zhao's leverage.",
+        },
+      ],
+    },
+  },
+
+  // Scene 3: Qin court reveals its intent
+  banquet_start: {
+    id: "banquet_start",
+    background: sceneHall,
+    title: "第三幕：秦廷觀璧",
+    titleEn: "Act 3: The Jade at Qin Court",
+    narration:
+      "咸陽宮中，秦王召見藺相如。大殿華麗，禮數卻十分草率。秦王一見和氏璧便愛不釋手，卻始終不談城池。",
+    narrationEn:
+      "In the palace at Xianyang, the King of Qin receives Lin Xiangru. The hall is magnificent, but the ceremony is careless. The King admires the jade at once, yet says nothing about the cities.",
+    dialogues: [
+      {
+        speaker: "秦王",
+        speakerEn: "King of Qin",
+        avatar: charQinwang,
+        text: "好璧！果然天下無雙。快呈上來，讓寡人細看。",
+        textEn: "A marvelous jade! Truly unmatched under heaven. Present it so I may inspect it closely.",
+        emotion: "😏 傲慢 Arrogant",
+        hint: "秦王只盯著玉璧，完全不談交換條件",
+        hintEn: "The King of Qin focuses only on the jade, not the terms of exchange",
+      },
+      {
+        speaker: "秦王",
+        speakerEn: "King of Qin",
+        avatar: charQinwang,
+        text: "此璧光潤無瑕，諸臣都來看看！",
+        textEn: "Its luster is flawless. Ministers, come admire it as well!",
+        emotion: "😈 得意 Triumphant",
+        hint: "秦王把玉璧傳給群臣，像是已據為己有",
+        hintEn: "The King passes the jade around as though it already belongs to Qin",
+      },
+      {
+        speaker: "藺相如",
+        speakerEn: "Lin Xiangru",
+        avatar: charLinxiangru,
+        text: "大王既愛此璧，臣亦願聞十五城安置何處，好使趙王知秦王之信。",
+        textEn: "Since Your Majesty prizes this jade, may I ask where the fifteen cities will be transferred, so the King of Zhao may know Qin is sincere?",
+        emotion: "😐 試探 Testing",
+        hint: "藺相如故意把話題拉回割城，試探秦王真心",
+        hintEn: "Lin Xiangru steers the discussion back to the cities to test Qin's sincerity",
+      },
+    ],
+    puzzle: {
+      question: "秦王不談城池，只顧玩賞玉璧。此時最好的應對是什麼？",
+      questionEn: "The King of Qin ignores the cities and only revels in the jade. What is the best response now?",
+      choices: [
+        {
+          text: "藉口玉璧有瑕，先把璧取回手中再說",
+          textEn: "Claim the jade has a flaw and get it back into your hands first",
+          nextScene: "confrontation",
+          points: 30,
+          feedback: "✅ 妙計！先奪回主動權，才能避免秦王強行奪璧。",
+          feedbackEn: "Excellent. Regaining control of the jade is the key to stopping Qin from seizing it.",
+        },
+        {
+          text: "當場斥責秦王無信，與群臣激烈爭辯",
+          textEn: "Openly denounce the King of Qin and argue with the entire court",
+          nextScene: "confrontation",
+          points: 10,
+          feedback: "⚠️ 有氣勢，但若拿不回玉璧，嘴上占理也無濟於事。",
+          feedbackEn: "Bold, but if you cannot recover the jade, righteous words alone will not help.",
+        },
+        {
+          text: "既已入秦，只能任由秦王處置和氏璧",
+          textEn: "Since you are in Qin, you must let the King do as he pleases with the jade",
+          nextScene: "confrontation",
+          points: 0,
+          feedback: "❌ 一旦放手，和氏璧就再也拿不回來了。",
+          feedbackEn: "Wrong. Once you surrender control, the jade is gone for good.",
+        },
+      ],
+    },
+  },
+
+  // Scene 4: Lin Xiangru regains the jade
+  confrontation: {
+    id: "confrontation",
+    background: sceneHall,
+    title: "第四幕：持璧倚柱",
+    titleEn: "Act 4: Jade Against the Pillar",
+    narration:
+      "藺相如說玉上有一處細瑕，請求指給秦王看。待璧一回手，他立刻退至殿柱旁，聲色俱厲。",
+    narrationEn:
+      "Lin Xiangru claims the jade has a tiny flaw and asks to point it out. The moment it returns to his hands, he retreats beside a pillar and his tone hardens.",
+    dialogues: [
+      {
+        speaker: "藺相如",
+        speakerEn: "Lin Xiangru",
+        avatar: charLinxiangru,
+        text: "此璧有微瑕，臣請指示大王。只是大王無意償城，今若強奪臣璧，臣寧與璧俱碎於柱！",
+        textEn: "This jade has a tiny flaw; let me indicate it, Your Majesty. But since Your Majesty has no intention of ceding the cities, if you forcefully take it, I would rather smash both myself and the jade against this pillar!",
+        emotion: "😤 凜然 Fearless",
+        hint: "藺相如要讓秦王知道，強奪只會兩敗俱傷",
+        hintEn: "Lin Xiangru makes clear that force will destroy the prize Qin wants",
+      },
+      {
+        speaker: "秦王",
+        speakerEn: "King of Qin",
+        avatar: charQinwang,
+        text: "卿敢威脅寡人？寡人本欲善待趙使，何必如此！",
+        textEn: "You dare threaten me? I meant to treat Zhao's envoy generously. Why force matters this far?",
+        emotion: "😡 憤怒 Furious",
+        hint: "秦王被識破後惱羞成怒，卻又不敢真逼碎玉璧",
+        hintEn: "Exposed, the King is furious, but still unwilling to risk the jade's destruction",
+      },
+      {
+        speaker: "藺相如",
+        speakerEn: "Lin Xiangru",
+        avatar: charLinxiangru,
+        text: "趙王齋戒五日後方敢獻璧。臣請先奉璧還舍，待禮成再進。若大王果欲予城，臣自當奉上。",
+        textEn: "The King of Zhao would only dare present the jade after five days of purification. Allow me to return with it first and present it properly when the rites are complete. If Your Majesty truly grants the cities, I will offer it then.",
+        emotion: "🔥 鎮定 Bold",
+        hint: "藺相如用禮儀作藉口，為把玉璧送回趙國爭取時間",
+        hintEn: "Lin Xiangru uses ritual as a pretext to buy time and send the jade back to Zhao",
+      },
+      {
+        speaker: "秦王",
+        speakerEn: "King of Qin",
+        avatar: charQinwang,
+        text: "……且退下。寡人改日與卿再議。",
+        textEn: "... Very well. Withdraw for now. We shall discuss it another day.",
+        emotion: "😤 不甘 Reluctant",
+        hint: "秦王暫時讓步，藺相如贏得了送璧回趙的機會",
+        hintEn: "The King yields for the moment, giving Lin Xiangru a chance to save the jade",
+      },
+    ],
+    puzzle: {
+      question: "🧩 藺相如為何要退到殿柱旁持璧而立？",
+      questionEn: "🧩 Why does Lin Xiangru back up beside a pillar while holding the jade?",
+      choices: [
+        {
+          text: "讓秦王明白若強搶玉璧，和氏璧立刻就會被撞碎",
+          textEn: "To show Qin that if he tries to seize the jade by force, it will be smashed immediately",
+          nextScene: "victory",
+          points: 30,
+          feedback: "✅ 正確！這一步讓秦王不敢輕舉妄動，藺相如才有後續周旋的空間。",
+          feedbackEn: "Correct. This move stops Qin from acting rashly and gives Lin Xiangru room to maneuver.",
+        },
+        {
+          text: "因為殿柱後面藏著趙國援兵，隨時可以衝出來",
+          textEn: "Because Zhao reinforcements are hidden behind the pillar and can emerge at any time",
+          nextScene: "victory",
+          points: 0,
+          feedback: "❌ 並沒有伏兵，藺相如依靠的是膽識與臨場應變。",
+          feedbackEn: "Wrong. There are no hidden troops; Lin Xiangru relies on courage and strategy.",
+        },
+        {
+          text: "只是為了站得更高，好讓群臣都能看見玉璧",
+          textEn: "Simply to stand higher so everyone can see the jade more clearly",
+          nextScene: "victory",
+          points: 0,
+          feedback: "❌ 重點不是展示玉璧，而是控制局面，阻止秦王搶奪。",
+          feedbackEn: "Wrong. The point is not display, but control: stopping Qin from seizing the jade.",
+        },
+      ],
+    },
+  },
+
+  // Scene 5: Victory
+  victory: {
+    id: "victory",
+    background: sceneHall,
+    title: "第五幕：完璧歸趙",
+    titleEn: "Act 5: The Jade Returns to Zhao",
+    narration:
+      "當夜，藺相如秘密命從者攜和氏璧抄小路返趙。秦王終究沒有交出城池，也未能得到玉璧。數日後，藺相如全身而退，趙國保住了國寶與顏面。",
+    narrationEn:
+      "That night, Lin Xiangru secretly sends the He Shi Bi back to Zhao by a side route. Qin never surrenders the cities, nor does it obtain the jade. A few days later, Lin Xiangru withdraws safely, preserving both Zhao's treasure and dignity.",
+    dialogues: [
+      {
+        speaker: "藺相如",
+        speakerEn: "Lin Xiangru",
+        avatar: charLinxiangru,
+        text: "臣已使人先奉璧歸趙。秦王無意償城，臣只得以權變全璧。",
+        textEn: "I have already sent the jade back to Zhao. Since the King of Qin never meant to give up the cities, I had no choice but to preserve it through strategy.",
+        emotion: "😊 欣慰 Satisfied",
+        hint: "藺相如靠智謀完成使命，而不是單靠武力",
+        hintEn: "Lin Xiangru succeeds through strategy rather than force",
+      },
+      {
+        speaker: "趙王",
+        speakerEn: "King of Zhao",
+        avatar: charZhaowang,
+        text: "相如臨秦不辱君命，真國士也！趙國得卿，足以安社稷。",
+        textEn: "Xiangru, you faced Qin without disgracing your ruler's command. You are truly a statesman. With you, Zhao may yet stand secure.",
+        emotion: "🥹 感動 Moved",
+        hint: "完璧歸趙讓藺相如聲名大振，也為後來更多外交任務鋪路",
+        hintEn: "This success makes Lin Xiangru famous and leads to later diplomatic missions",
+      },
+    ],
+    nextScene: "end",
+  },
+
+  // End
+  end: {
+    id: "end",
+    background: sceneRoad,
+    title: "通關完成！",
+    titleEn: "Level Complete!",
+    narration:
+      "恭喜你完成了「完璧歸趙」關卡！你見證了藺相如在強秦面前以膽識與智謀保住和氏璧的歷史故事。這段故事出自《史記·廉頗藺相如列傳》。",
+    narrationEn:
+      "Congratulations! You've completed the 'Return the Jade to Zhao' level! You witnessed how Lin Xiangru used courage and strategy to preserve the He Shi Bi before mighty Qin. This story comes from Records of the Grand Historian.",
+    dialogues: [],
+  },
+};
