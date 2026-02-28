@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -43,9 +43,11 @@ import {
 } from "@/data/wanbiLevel";
 import {
   type DirectorSummary,
+  type FinalEvaluation,
   generateCharacterReply,
   generateClueImage,
   generateDirectorSummary,
+  generateFinalEvaluation,
 } from "@/lib/openrouter";
 
 type GamePhase = "briefing" | "lost" | "playing" | "won";
@@ -64,6 +66,14 @@ interface ActionLogEntry {
   label: string;
   nodeId: NodeId;
   outcome: string;
+}
+
+interface QuestionLogEntry {
+  characterId: CharacterId;
+  id: string;
+  kind: "custom" | "probe";
+  nodeId: NodeId;
+  prompt: string;
 }
 
 interface GeneratedImageState {
@@ -306,6 +316,106 @@ const clamp = (value: number, min = 0, max = 100) => Math.min(max, Math.max(min,
 const createId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).replace(".", "").slice(0, 6)}`;
 
+const renderInlineMarkdown = (text: string) =>
+  text.split(/(\*\*[^*]+\*\*)/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={`${part}-${index}`} className="font-semibold text-foreground">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
+
+const renderMarkdownContent = (text: string) => {
+  const lines = text.replace(/\r/g, "").split("\n");
+  const blocks: ReactNode[] = [];
+  let paragraphLines: string[] = [];
+  let listType: "ol" | "ul" | null = null;
+  let listItems: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphLines.length === 0) return;
+    blocks.push(
+      <p key={`p-${blocks.length}`} className="text-sm leading-7 text-foreground">
+        {renderInlineMarkdown(paragraphLines.join(" "))}
+      </p>,
+    );
+    paragraphLines = [];
+  };
+
+  const flushList = () => {
+    if (!listType || listItems.length === 0) return;
+
+    const ListTag = listType;
+    blocks.push(
+      <ListTag
+        key={`${listType}-${blocks.length}`}
+        className={`space-y-2 pl-5 text-sm leading-7 text-foreground ${
+          listType === "ol" ? "list-decimal" : "list-disc"
+        }`}
+      >
+        {listItems.map((item, index) => (
+          <li key={`${item}-${index}`}>{renderInlineMarkdown(item)}</li>
+        ))}
+      </ListTag>,
+    );
+
+    listType = null;
+    listItems = [];
+  };
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    const ordered = trimmed.match(/^\d+\.\s+(.*)$/);
+    const unordered = trimmed.match(/^[-*]\s+(.*)$/);
+
+    if (!trimmed) {
+      flushParagraph();
+      flushList();
+      return;
+    }
+
+    if (ordered) {
+      flushParagraph();
+      if (listType !== "ol") {
+        flushList();
+        listType = "ol";
+      }
+      listItems.push(ordered[1]);
+      return;
+    }
+
+    if (unordered) {
+      flushParagraph();
+      if (listType !== "ul") {
+        flushList();
+        listType = "ul";
+      }
+      listItems.push(unordered[1]);
+      return;
+    }
+
+    flushList();
+    paragraphLines.push(trimmed);
+  });
+
+  flushParagraph();
+  flushList();
+
+  return <div className="space-y-3 break-words">{blocks}</div>;
+};
+
+const stripMarkdownForSpeech = (text: string) =>
+  text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/^\s*[-*]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/\n+/g, " ")
+    .trim();
+
 const buildFallbackSummary = (args: {
   actionLog: ActionLogEntry[];
   clueIds: ClueId[];
@@ -368,6 +478,50 @@ const buildFallbackCharacterReply = (args: {
   }」，${character.name}暫時只肯說到這裡。先把這一段能問的都問清楚，再往下追會更穩妥。`;
 };
 
+const buildFallbackFinalEvaluation = (args: {
+  actionLog: ActionLogEntry[];
+  currentNodeId: NodeId;
+  endingTitle: string;
+  outcome: "lost" | "won";
+  questionLog: QuestionLogEntry[];
+  stats: MissionStats;
+  timeRemaining: number;
+}): FinalEvaluation => {
+  const average = (args.stats.composure + args.stats.insight + args.stats.leverage) / 3;
+  const grade =
+    average >= 82 ? "S" : average >= 72 ? "A" : average >= 58 ? "B" : average >= 45 ? "C" : "D";
+  const askedCount = args.questionLog.length;
+  const recentQuestions = args.questionLog.slice(-3).map((entry) => entry.prompt);
+  const lastAction = args.actionLog.at(-1)?.label || "尚未定下關鍵一步";
+
+  return {
+    closing:
+      args.outcome === "won"
+        ? "你能完璧返趙，不只靠膽氣，也靠你一路問出的疑點與退路。"
+        : "這一局雖未竟全功，但你問過的疑點與做過的選擇，已足見局勢是如何一步一步失手的。",
+    grade,
+    questionReading:
+      askedCount === 0
+        ? "此行幾乎未曾多問，能見其決，卻也少了審勢求證的一層工夫。"
+        : `本局共問過 ${askedCount} 次。你最在意的，是${recentQuestions
+            .map((question) => `「${question}」`)
+            .join("、")}這幾處，足見你不是只看表面動靜。`,
+    strategyReview:
+      args.outcome === "won"
+        ? `你最後把局面收在「${lastAction}」之後，路數大致合乎《史記》所見的權變。`
+        : `局勢停在「${lastAction}」之後。${
+            args.timeRemaining <= 0
+              ? "拖到時機用盡，是這一局最傷的地方。"
+              : "若當時能更早把人情、禮法與退路連在一起，未必會困於此處。"
+          }`,
+    title: `司馬遷評 · ${args.endingTitle}`,
+    verdict:
+      args.outcome === "won"
+        ? `此局止於${wanbiNodes[args.currentNodeId].title}，而能保璧返趙，關鍵在你沒有把話只停在殿上。`
+        : `此局止於${wanbiNodes[args.currentNodeId].title}。勝負未成之前，你已看見一些端倪，但收束還差最後一著。`,
+  };
+};
+
 const getCurrentNodeImageClue = (currentNodeId: NodeId, clueIds: ClueId[]) => {
   const currentNode = wanbiNodes[currentNodeId];
   return clueIds
@@ -422,8 +576,12 @@ const GameEngine = () => {
   );
   const [summaryMode, setSummaryMode] = useState<"ai" | "fallback">("fallback");
   const [actionLog, setActionLog] = useState<ActionLogEntry[]>([]);
+  const [questionLog, setQuestionLog] = useState<QuestionLogEntry[]>([]);
   const [generatedImages, setGeneratedImages] = useState<Record<string, GeneratedImageState>>({});
   const [activeFailStateId, setActiveFailStateId] = useState<FailStateId | null>(null);
+  const [finalEvaluation, setFinalEvaluation] = useState<FinalEvaluation | null>(null);
+  const [finalEvaluationLoading, setFinalEvaluationLoading] = useState(false);
+  const [finalEvaluationMode, setFinalEvaluationMode] = useState<"ai" | "fallback">("fallback");
 
   const currentNode = wanbiNodes[currentNodeId];
   const currentCharacter = wanbiCharacters[selectedCharacterId];
@@ -444,6 +602,9 @@ const GameEngine = () => {
   const timerProgress = (timeRemaining / currentNodeTimeLimit) * 100;
   const timerCritical = timeRemaining <= timerWarningThreshold;
   const isClockPaused = chatLoading || summaryLoading || phase !== "playing";
+  const askedQuestions = questionLog.map(
+    (entry) => `${wanbiNodes[entry.nodeId].title} · ${wanbiCharacters[entry.characterId].name}：${entry.prompt}`,
+  );
 
   const resetMission = useCallback(() => {
     setPhase("briefing");
@@ -473,13 +634,12 @@ const GameEngine = () => {
     );
     setSummaryMode("fallback");
     setActionLog([]);
+    setQuestionLog([]);
     setGeneratedImages({});
     setActiveFailStateId(null);
-  }, []);
-
-  const failMission = useCallback((failStateId: FailStateId) => {
-    setActiveFailStateId(failStateId);
-    setPhase("lost");
+    setFinalEvaluation(null);
+    setFinalEvaluationLoading(false);
+    setFinalEvaluationMode("fallback");
   }, []);
 
   const appendChatEntry = useCallback((characterId: CharacterId, entry: ChatEntry) => {
@@ -488,6 +648,92 @@ const GameEngine = () => {
       [characterId]: [...(current[characterId] || []), entry],
     }));
   }, []);
+
+  const refreshFinalEvaluation = useCallback(
+    async (nextState: {
+      actionLog?: ActionLogEntry[];
+      currentNodeId?: NodeId;
+      endingTitle: string;
+      outcome: "lost" | "won";
+      questionLog?: QuestionLogEntry[];
+      stats?: MissionStats;
+      timeRemaining?: number;
+    }) => {
+      const evaluationInput = {
+        actionLog: nextState.actionLog || actionLog,
+        currentNodeId: nextState.currentNodeId || currentNodeId,
+        questionLog: nextState.questionLog || questionLog,
+        stats: nextState.stats || stats,
+        timeRemaining: nextState.timeRemaining ?? timeRemaining,
+      };
+
+      setFinalEvaluationLoading(true);
+      try {
+        const summary = await generateFinalEvaluation({
+          input: {
+            clues: discoveredClueIds.map((clueId) => wanbiClues[clueId].title),
+            currentNode: wanbiNodes[evaluationInput.currentNodeId].title,
+            endingTitle: nextState.endingTitle,
+            missionLog: evaluationInput.actionLog.map((entry) => `${entry.label}：${entry.outcome}`),
+            outcome: nextState.outcome,
+            questionsAsked: evaluationInput.questionLog.map(
+              (entry) =>
+                `${wanbiNodes[entry.nodeId].title} · ${wanbiCharacters[entry.characterId].name}：${entry.prompt}`,
+            ),
+            stats: evaluationInput.stats,
+            timeRemaining: evaluationInput.timeRemaining,
+          },
+        });
+        setFinalEvaluation(summary);
+        setFinalEvaluationMode("ai");
+        if (ttsEnabled) {
+          speak(`${summary.title}。${summary.verdict}。${summary.closing}`, { rate: 0.95 });
+        }
+      } catch {
+        setFinalEvaluation(
+          buildFallbackFinalEvaluation({
+            actionLog: evaluationInput.actionLog,
+            currentNodeId: evaluationInput.currentNodeId,
+            endingTitle: nextState.endingTitle,
+            outcome: nextState.outcome,
+            questionLog: evaluationInput.questionLog,
+            stats: evaluationInput.stats,
+            timeRemaining: evaluationInput.timeRemaining,
+          }),
+        );
+        setFinalEvaluationMode("fallback");
+      } finally {
+        setFinalEvaluationLoading(false);
+      }
+    },
+    [actionLog, currentNodeId, discoveredClueIds, questionLog, speak, stats, timeRemaining, ttsEnabled],
+  );
+
+  const failMission = useCallback(
+    (
+      failStateId: FailStateId,
+      nextState?: {
+        actionLog?: ActionLogEntry[];
+        currentNodeId?: NodeId;
+        questionLog?: QuestionLogEntry[];
+        stats?: MissionStats;
+        timeRemaining?: number;
+      },
+    ) => {
+      setActiveFailStateId(failStateId);
+      setPhase("lost");
+      void refreshFinalEvaluation({
+        actionLog: nextState?.actionLog,
+        currentNodeId: nextState?.currentNodeId,
+        endingTitle: wanbiFailStates[failStateId].title,
+        outcome: "lost",
+        questionLog: nextState?.questionLog,
+        stats: nextState?.stats,
+        timeRemaining: nextState?.timeRemaining,
+      });
+    },
+    [refreshFinalEvaluation],
+  );
 
   const refreshDirectorSummary = useCallback(
     async (nextState?: {
@@ -637,6 +883,16 @@ const GameEngine = () => {
 
     const remainingAfterAction = applyTimeCost(topic.timeCost);
     const clueIdsAfterProbe = revealClue(topic.unlockClueId);
+    const nextQuestionLog: QuestionLogEntry[] = [
+      ...questionLog,
+      {
+        characterId: topic.characterId,
+        id: createId(),
+        kind: "probe",
+        nodeId: currentNodeId,
+        prompt: topic.prompt,
+      },
+    ];
     const nextStats = applyStatDelta(
       stats,
       topic.rewardStat ? { [topic.rewardStat]: 6 } : undefined,
@@ -656,6 +912,7 @@ const GameEngine = () => {
 
     setStats(nextStats);
     setActionLog(nextLog);
+    setQuestionLog(nextQuestionLog);
     setUsedTopicIds((current) => [...current, topic.id]);
     setPanelTab("conversation");
 
@@ -702,7 +959,13 @@ const GameEngine = () => {
     } finally {
       setChatLoading(false);
       if (remainingAfterAction <= 0) {
-        failMission("timeExpired");
+        failMission("timeExpired", {
+          actionLog: nextLog,
+          currentNodeId,
+          questionLog: nextQuestionLog,
+          stats: nextStats,
+          timeRemaining: remainingAfterAction,
+        });
         return;
       }
       await refreshDirectorSummary({
@@ -719,7 +982,18 @@ const GameEngine = () => {
     if (phase !== "playing" || chatLoading || !questionDraft.trim()) return;
     const prompt = questionDraft.trim();
     const remainingAfterAction = applyTimeCost(CUSTOM_QUESTION_TIME_COST);
+    const nextQuestionLog: QuestionLogEntry[] = [
+      ...questionLog,
+      {
+        characterId: selectedCharacterId,
+        id: createId(),
+        kind: "custom",
+        nodeId: currentNodeId,
+        prompt,
+      },
+    ];
     setPanelTab("conversation");
+    setQuestionLog(nextQuestionLog);
     appendChatEntry(selectedCharacterId, {
       id: createId(),
       role: "user",
@@ -768,7 +1042,11 @@ const GameEngine = () => {
     } finally {
       setChatLoading(false);
       if (remainingAfterAction <= 0) {
-        failMission("timeExpired");
+        failMission("timeExpired", {
+          currentNodeId,
+          questionLog: nextQuestionLog,
+          timeRemaining: remainingAfterAction,
+        });
       }
     }
   };
@@ -807,7 +1085,12 @@ const GameEngine = () => {
         stats: nextStats,
         timeRemaining: remainingAfterAction,
       });
-      failMission("timeExpired");
+      failMission("timeExpired", {
+        actionLog: nextLog,
+        currentNodeId,
+        stats: nextStats,
+        timeRemaining: remainingAfterAction,
+      });
       return;
     }
 
@@ -819,7 +1102,12 @@ const GameEngine = () => {
         stats: nextStats,
         timeRemaining: remainingAfterAction,
       });
-      failMission(action.failStateId);
+      failMission(action.failStateId, {
+        actionLog: nextLog,
+        currentNodeId,
+        stats: nextStats,
+        timeRemaining: remainingAfterAction,
+      });
       return;
     }
 
@@ -832,6 +1120,14 @@ const GameEngine = () => {
         timeRemaining: remainingAfterAction,
       });
       setPhase("won");
+      void refreshFinalEvaluation({
+        actionLog: nextLog,
+        currentNodeId,
+        endingTitle: wanbiVictorySummary.title,
+        outcome: "won",
+        stats: nextStats,
+        timeRemaining: remainingAfterAction,
+      });
       return;
     }
 
@@ -939,6 +1235,98 @@ const GameEngine = () => {
 
   const selectedActionMissingClues =
     selectedAction?.requiredClueIds?.filter((clueId) => !discoveredClueIds.includes(clueId)) || [];
+  const finalEvaluationNarration = finalEvaluation
+    ? `${finalEvaluation.title}。${finalEvaluation.verdict}。${finalEvaluation.questionReading}。${finalEvaluation.closing}`
+    : "";
+
+  const renderFinalEvaluationPanel = () => (
+    <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="rounded-[28px] border border-border/70 bg-background/45 p-5">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="font-serif text-2xl text-foreground">
+              {finalEvaluation?.title || "司馬遷評"}
+            </p>
+            <p className="text-xs uppercase tracking-[0.2em] text-gold">
+              評級 {finalEvaluation?.grade || "待定"} ·{" "}
+              {finalEvaluationMode === "ai" ? "終局評語" : "本地整理"}
+            </p>
+          </div>
+          <button
+            onClick={() =>
+              finalEvaluation &&
+              speak(stripMarkdownForSpeech(finalEvaluationNarration), {
+                force: true,
+                rate: 0.95,
+              })
+            }
+            disabled={!finalEvaluation}
+            className="rounded-full border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold disabled:opacity-50"
+          >
+            <span className="inline-flex items-center gap-1">
+              <Volume2 className="h-3.5 w-3.5" />
+              朗讀評語
+            </span>
+          </button>
+        </div>
+
+        {finalEvaluationLoading ? (
+          <p className="text-sm leading-7 text-muted-foreground">
+            司馬遷正在通讀你本局的問答與行動，稍候片刻。
+          </p>
+        ) : finalEvaluation ? (
+          <div className="space-y-3 text-sm leading-7">
+            <p>
+              <span className="text-gold">評語：</span>
+              {finalEvaluation.verdict}
+            </p>
+            <p>
+              <span className="text-gold">觀其所問：</span>
+              {finalEvaluation.questionReading}
+            </p>
+            <p>
+              <span className="text-gold">得失：</span>
+              {finalEvaluation.strategyReview}
+            </p>
+            <p>
+              <span className="text-gold">結語：</span>
+              {finalEvaluation.closing}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm leading-7 text-muted-foreground">
+            結算完成後，這裡會整理本局評語。
+          </p>
+        )}
+      </div>
+
+      <div className="rounded-[28px] border border-border/70 bg-background/45 p-5">
+        <div className="mb-3 flex items-center gap-2 text-gold">
+          <ScrollText className="h-4 w-4" />
+          本局提問
+        </div>
+        {askedQuestions.length === 0 ? (
+          <p className="text-sm leading-7 text-muted-foreground">這一局沒有留下提問紀錄。</p>
+        ) : (
+          <ScrollArea className="h-56 pr-3">
+            <div className="space-y-3">
+              {askedQuestions.map((question, index) => (
+                <div
+                  key={`${question}-${index}`}
+                  className="rounded-2xl border border-border/60 bg-secondary/30 px-4 py-3"
+                >
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    第 {index + 1} 問
+                  </p>
+                  <p className="mt-1 text-sm leading-7 text-foreground">{question}</p>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
@@ -1270,10 +1658,15 @@ const GameEngine = () => {
                                 {entry.role === "user" ? "Lin Xiangru" : currentCharacter.name}
                                 {entry.source === "ai" && <Sparkles className="h-3 w-3 text-gold" />}
                               </div>
-                              <p className="text-sm leading-7 text-foreground">{entry.text}</p>
+                              {renderMarkdownContent(entry.text)}
                               {entry.role === "assistant" && (
                                 <button
-                                  onClick={() => speak(entry.text, { rate: 0.98 })}
+                                  onClick={() =>
+                                    speak(stripMarkdownForSpeech(entry.text), {
+                                      force: true,
+                                      rate: 0.98,
+                                    })
+                                  }
                                   className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-gold"
                                 >
                                   <Volume2 className="h-3.5 w-3.5" />
@@ -1457,7 +1850,12 @@ const GameEngine = () => {
                         需要朗讀時，可用左下角設定調整聲音與字體大小。
                       </p>
                       <button
-                        onClick={() => speak(directorSummary.judgement, { rate: 0.96 })}
+                        onClick={() =>
+                          speak(stripMarkdownForSpeech(directorSummary.judgement), {
+                            force: true,
+                            rate: 0.96,
+                          })
+                        }
                         className="mt-4 rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold"
                       >
                         朗讀評估
@@ -1516,7 +1914,7 @@ const GameEngine = () => {
 
         {phase === "lost" && activeFailState && (
           <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
-            <div className="max-w-3xl rounded-[34px] border border-destructive/25 bg-background/80 p-8 backdrop-blur-2xl">
+            <div className="max-h-[calc(100vh-2rem)] w-full max-w-5xl overflow-y-auto rounded-[34px] border border-destructive/25 bg-background/80 p-8 backdrop-blur-2xl">
               <div className="mb-3 flex items-center gap-2 text-destructive">
                 <ShieldAlert className="h-5 w-5" />
                 任務失敗
@@ -1530,6 +1928,7 @@ const GameEngine = () => {
               <p className="mt-4 text-xs leading-6 text-muted-foreground">
                 {activeFailState.historyReference}
               </p>
+              {renderFinalEvaluationPanel()}
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
                   onClick={resetMission}
@@ -1550,7 +1949,7 @@ const GameEngine = () => {
 
         {phase === "won" && (
           <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/45 p-4">
-            <div className="max-w-3xl rounded-[34px] border border-jade/25 bg-background/80 p-8 backdrop-blur-2xl">
+            <div className="max-h-[calc(100vh-2rem)] w-full max-w-5xl overflow-y-auto rounded-[34px] border border-jade/25 bg-background/80 p-8 backdrop-blur-2xl">
               <div className="mb-3 flex items-center gap-2 text-jade">
                 <CheckCircle2 className="h-5 w-5" />
                 {wanbiVictorySummary.subtitle}
@@ -1577,6 +1976,7 @@ const GameEngine = () => {
               <p className="mt-4 text-xs leading-6 text-muted-foreground">
                 {wanbiVictorySummary.historicalReference}
               </p>
+              {renderFinalEvaluationPanel()}
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
                   onClick={resetMission}

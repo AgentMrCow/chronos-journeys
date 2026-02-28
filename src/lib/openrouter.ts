@@ -19,6 +19,30 @@ export interface DirectorSummary {
   warning: string;
 }
 
+export interface FinalEvaluationInput {
+  clues: string[];
+  currentNode: string;
+  endingTitle: string;
+  missionLog: string[];
+  outcome: "lost" | "won";
+  questionsAsked: string[];
+  stats: {
+    composure: number;
+    insight: number;
+    leverage: number;
+  };
+  timeRemaining: number;
+}
+
+export interface FinalEvaluation {
+  closing: string;
+  grade: string;
+  questionReading: string;
+  strategyReview: string;
+  title: string;
+  verdict: string;
+}
+
 export interface GeneratedClueImage {
   caption: string;
   imageUrl: string;
@@ -72,6 +96,10 @@ export const generateCharacterReply = async (args: {
 export const generateDirectorSummary = async (args: {
   input: DirectorSummaryInput;
 }): Promise<DirectorSummary> => requestProxy<DirectorSummary>("director-summary", args.input);
+
+export const generateFinalEvaluation = async (args: {
+  input: FinalEvaluationInput;
+}): Promise<FinalEvaluation> => requestProxy<FinalEvaluation>("final-evaluation", args.input);
 
 export const generateClueImage = async (args: {
   prompt: string;

@@ -1,9 +1,13 @@
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 
-const DEFAULT_OPENROUTER_CHAT_MODEL = "openai/gpt-4.1-mini";
-const DEFAULT_OPENROUTER_IMAGE_MODEL = "google/gemini-2.5-flash-image-preview";
+const DEFAULT_OPENROUTER_CHAT_MODEL = "google/gemini-3-flash-preview";
+const DEFAULT_OPENROUTER_IMAGE_MODEL = "google/gemini-3.1-flash-image-preview";
 
-export type OpenRouterAction = "character-reply" | "director-summary" | "clue-image";
+export type OpenRouterAction =
+  | "character-reply"
+  | "director-summary"
+  | "final-evaluation"
+  | "clue-image";
 
 export interface DirectorSummaryInput {
   clues: string[];
@@ -24,6 +28,30 @@ export interface DirectorSummary {
   strength: string;
   title: string;
   warning: string;
+}
+
+export interface FinalEvaluationInput {
+  clues: string[];
+  currentNode: string;
+  endingTitle: string;
+  missionLog: string[];
+  outcome: "lost" | "won";
+  questionsAsked: string[];
+  stats: {
+    composure: number;
+    insight: number;
+    leverage: number;
+  };
+  timeRemaining: number;
+}
+
+export interface FinalEvaluation {
+  closing: string;
+  grade: string;
+  questionReading: string;
+  strategyReview: string;
+  title: string;
+  verdict: string;
 }
 
 export interface GeneratedClueImage {
@@ -127,6 +155,39 @@ const asDirectorSummaryInput = (value: unknown): DirectorSummaryInput => {
     clues: asStringArray(value.clues, "clues"),
     currentNode: asString(value.currentNode, "currentNode"),
     missionLog: asStringArray(value.missionLog, "missionLog"),
+    stats: {
+      composure:
+        typeof value.stats.composure === "number"
+          ? value.stats.composure
+          : Number(value.stats.composure),
+      insight:
+        typeof value.stats.insight === "number" ? value.stats.insight : Number(value.stats.insight),
+      leverage:
+        typeof value.stats.leverage === "number"
+          ? value.stats.leverage
+          : Number(value.stats.leverage),
+    },
+    timeRemaining:
+      typeof value.timeRemaining === "number" ? value.timeRemaining : Number(value.timeRemaining),
+  };
+};
+
+const asFinalEvaluationInput = (value: unknown): FinalEvaluationInput => {
+  if (!isRecord(value) || !isRecord(value.stats)) {
+    throw new Error("Invalid final evaluation input");
+  }
+
+  if (value.outcome !== "won" && value.outcome !== "lost") {
+    throw new Error("Invalid outcome");
+  }
+
+  return {
+    clues: asStringArray(value.clues, "clues"),
+    currentNode: asString(value.currentNode, "currentNode"),
+    endingTitle: asString(value.endingTitle, "endingTitle"),
+    missionLog: asStringArray(value.missionLog, "missionLog"),
+    outcome: value.outcome,
+    questionsAsked: asStringArray(value.questionsAsked, "questionsAsked"),
     stats: {
       composure:
         typeof value.stats.composure === "number"
@@ -259,7 +320,15 @@ You are inside the "完璧歸趙" historical incident.
 Current node: ${input.currentNode}
 Known clues: ${input.discoveredClues.join("；") || "尚未發現關鍵線索"}
 
-Stay historically plausible, answer in Traditional Chinese, and never reveal future facts your character could not know.`,
+Stay historically plausible, answer in Traditional Chinese, and never reveal future facts your character could not know.
+
+Speak like a person in the scene, not like a report, summary, or game guide.
+Default to 2 to 5 short sentences in natural spoken dialogue.
+Do not use slogans, stage directions, or self-aware AI phrasing.
+Avoid markdown, bold text, and long bullet lists.
+Only use a numbered list if the player explicitly asks for a route, plan, or sequence of steps. If you do, keep it to at most 3 short items.
+Do not restate the entire situation unless the player asks.
+Answer only from this character's own knowledge, rank, motives, and emotional position.`,
     },
     ...input.history.map((entry) => ({
       role: entry.role,
@@ -272,10 +341,10 @@ Stay historically plausible, answer in Traditional Chinese, and never reveal fut
   ];
 
   const payload = await requestOpenRouter(env, {
-    max_tokens: 220,
+    max_tokens: 420,
     messages,
     model: config.chatModel,
-    temperature: 0.8,
+    temperature: 0.72,
   });
 
   return {
@@ -333,6 +402,62 @@ Mission log: ${input.missionLog.join("；") || "mission just started"}`,
   return JSON.parse(raw) as DirectorSummary;
 };
 
+const handleFinalEvaluation = async (
+  input: FinalEvaluationInput,
+  env: OpenRouterServerEnv,
+): Promise<FinalEvaluation> => {
+  const config = getRuntimeConfig(env);
+  const payload = await requestOpenRouter(env, {
+    max_tokens: 520,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are 司馬遷 writing the final judgement on a completed playthrough of 完璧歸趙. Read the player's full record, especially every question they asked. Treat those questions as evidence of what the player noticed, doubted, feared, or understood. Respond only with JSON matching the schema. Write all fields in Traditional Chinese except the grade, which should be one of S, A, B, C, D. Do not use modern game jargon.",
+      },
+      {
+        role: "user",
+        content: `Result: ${input.outcome}
+Ending title: ${input.endingTitle}
+Current node: ${input.currentNode}
+Time remaining: ${input.timeRemaining}
+Stats: insight ${input.stats.insight}, leverage ${input.stats.leverage}, composure ${input.stats.composure}
+Clues: ${input.clues.join("；") || "none"}
+Mission log: ${input.missionLog.join("；") || "mission just started"}
+Questions asked: ${input.questionsAsked.join("；") || "none"}`,
+      },
+    ],
+    model: config.chatModel,
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "final_evaluation",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            closing: { type: "string" },
+            grade: {
+              type: "string",
+              enum: ["S", "A", "B", "C", "D"],
+            },
+            questionReading: { type: "string" },
+            strategyReview: { type: "string" },
+            title: { type: "string" },
+            verdict: { type: "string" },
+          },
+          required: ["closing", "grade", "questionReading", "strategyReview", "title", "verdict"],
+          additionalProperties: false,
+        },
+      },
+    },
+    temperature: 0.45,
+  });
+
+  const raw = normaliseMessageText(payload.choices?.[0]?.message?.content);
+  return JSON.parse(raw) as FinalEvaluation;
+};
+
 const handleClueImage = async (
   input: { prompt: string },
   env: OpenRouterServerEnv,
@@ -369,7 +494,10 @@ const handleClueImage = async (
 };
 
 export const isOpenRouterAction = (value: string): value is OpenRouterAction =>
-  value === "character-reply" || value === "director-summary" || value === "clue-image";
+  value === "character-reply" ||
+  value === "director-summary" ||
+  value === "final-evaluation" ||
+  value === "clue-image";
 
 export const executeOpenRouterAction = async (
   action: OpenRouterAction,
@@ -381,6 +509,8 @@ export const executeOpenRouterAction = async (
       return handleCharacterReply(asCharacterReplyInput(input), env);
     case "director-summary":
       return handleDirectorSummary(asDirectorSummaryInput(input), env);
+    case "final-evaluation":
+      return handleFinalEvaluation(asFinalEvaluationInput(input), env);
     case "clue-image":
       return handleClueImage(asClueImageInput(input), env);
   }

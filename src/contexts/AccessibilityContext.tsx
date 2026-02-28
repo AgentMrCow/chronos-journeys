@@ -15,6 +15,7 @@ export interface VoiceOption {
 }
 
 export interface SpeakOptions {
+  force?: boolean;
   interrupt?: boolean;
   lang?: string;
   pitch?: number;
@@ -152,7 +153,7 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const speak = useCallback(
     (text: string, options?: SpeakOptions) => {
-      if (!state.ttsEnabled || !speechSupported || !text.trim()) return;
+      if ((!state.ttsEnabled && !options?.force) || !speechSupported || !text.trim()) return;
 
       if (options?.interrupt !== false) {
         window.speechSynthesis.cancel();

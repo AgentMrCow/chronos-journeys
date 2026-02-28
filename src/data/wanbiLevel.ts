@@ -163,7 +163,7 @@ export const wanbiCharacters: Record<CharacterId, CharacterProfile> = {
   palaceAttendant: {
     id: "palaceAttendant",
     fallbackVoice: "觀察細膩的宮女",
-    intro: "秦宮侍者最清楚現場氣氛。她不懂國策，但會注意禮數是否被認真對待。",
+    intro: "秦宮侍者最清楚現場氣氛。他不懂國策，但會注意禮數是否被認真對待。",
     name: "秦宮侍者",
     role: "殿上近身侍從",
     systemPrompt:
