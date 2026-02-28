@@ -42,8 +42,6 @@ import {
   wanbiVictorySummary,
 } from "@/data/wanbiLevel";
 import {
-  DEFAULT_OPENROUTER_CHAT_MODEL,
-  DEFAULT_OPENROUTER_IMAGE_MODEL,
   type DirectorSummary,
   generateCharacterReply,
   generateClueImage,
@@ -427,10 +425,6 @@ const GameEngine = () => {
   const [generatedImages, setGeneratedImages] = useState<Record<string, GeneratedImageState>>({});
   const [activeFailStateId, setActiveFailStateId] = useState<FailStateId | null>(null);
 
-  const runtimeApiKey = import.meta.env.VITE_OPENROUTER_API_KEY || "";
-  const chatModel = import.meta.env.VITE_OPENROUTER_CHAT_MODEL || DEFAULT_OPENROUTER_CHAT_MODEL;
-  const imageModel = import.meta.env.VITE_OPENROUTER_IMAGE_MODEL || DEFAULT_OPENROUTER_IMAGE_MODEL;
-
   const currentNode = wanbiNodes[currentNodeId];
   const currentCharacter = wanbiCharacters[selectedCharacterId];
   const selectedAction =
@@ -445,7 +439,6 @@ const GameEngine = () => {
   const activeFailState = activeFailStateId ? wanbiFailStates[activeFailStateId] : null;
   const displayedImageClue = getCurrentNodeImageClue(currentNodeId, discoveredClueIds);
   const displayedImageState = displayedImageClue ? generatedImages[displayedImageClue.id] : undefined;
-  const hasOpenRouter = runtimeApiKey.trim().length > 0;
   const currentNodeTimeLimit = currentNode.timeLimit;
   const timerWarningThreshold = Math.max(12, Math.ceil(currentNodeTimeLimit * 0.3));
   const timerProgress = (timeRemaining / currentNodeTimeLimit) * 100;
@@ -514,18 +507,7 @@ const GameEngine = () => {
 
       setSummaryLoading(true);
       try {
-        if (!hasOpenRouter) {
-          setDirectorSummary(buildFallbackSummary(summaryInput));
-          setSummaryMode("fallback");
-          return;
-        }
-
         const summary = await generateDirectorSummary({
-          config: {
-            apiKey: runtimeApiKey,
-            chatModel,
-            imageModel,
-          },
           input: {
             clues: summaryInput.clueIds.map((clueId) => wanbiClues[clueId].title),
             currentNode: wanbiNodes[summaryInput.currentNodeId].title,
@@ -548,12 +530,8 @@ const GameEngine = () => {
     },
     [
       actionLog,
-      chatModel,
       currentNodeId,
       discoveredClueIds,
-      hasOpenRouter,
-      imageModel,
-      runtimeApiKey,
       speak,
       stats,
       timeRemaining,
@@ -588,14 +566,13 @@ const GameEngine = () => {
   }, [currentNode, phase, speak, ttsEnabled]);
 
   useEffect(() => {
-    if (!hasOpenRouter) return;
     const imageClues = discoveredClueIds
       .map((clueId) => wanbiClues[clueId])
       .filter((clue) => clue.imagePrompt);
 
     imageClues.forEach((clue) => {
       const imageState = generatedImages[clue.id];
-      if (imageState && (imageState.status === "loading" || imageState.status === "ready")) return;
+      if (imageState && imageState.status !== "idle") return;
 
       setGeneratedImages((current) => ({
         ...current,
@@ -603,11 +580,6 @@ const GameEngine = () => {
       }));
 
       void generateClueImage({
-        config: {
-          apiKey: runtimeApiKey,
-          chatModel,
-          imageModel,
-        },
         prompt: clue.imagePrompt!,
       })
         .then((result) => {
@@ -630,7 +602,7 @@ const GameEngine = () => {
           }));
         });
     });
-  }, [chatModel, discoveredClueIds, generatedImages, hasOpenRouter, imageModel, runtimeApiKey]);
+  }, [discoveredClueIds, generatedImages]);
 
   const startMission = async () => {
     setPhase("playing");
@@ -697,28 +669,21 @@ const GameEngine = () => {
     setChatError(null);
     setChatLoading(true);
     try {
-      const reply = hasOpenRouter
-        ? await generateCharacterReply({
-            config: {
-              apiKey: runtimeApiKey,
-              chatModel,
-              imageModel,
-            },
-            currentNode: currentNode.title,
-            discoveredClues: clueIdsAfterProbe.map((clueId) => wanbiClues[clueId].summary),
-            history: (chatHistory[topic.characterId] || []).map((entry) => ({
-              role: entry.role,
-              text: entry.text,
-            })),
-            prompt: topic.prompt,
-            systemPrompt: wanbiCharacters[topic.characterId].systemPrompt,
-          })
-        : topic.fallbackReply;
+      const reply = await generateCharacterReply({
+        currentNode: currentNode.title,
+        discoveredClues: clueIdsAfterProbe.map((clueId) => wanbiClues[clueId].summary),
+        history: (chatHistory[topic.characterId] || []).map((entry) => ({
+          role: entry.role,
+          text: entry.text,
+        })),
+        prompt: topic.prompt,
+        systemPrompt: wanbiCharacters[topic.characterId].systemPrompt,
+      });
 
       appendChatEntry(topic.characterId, {
         id: createId(),
         role: "assistant",
-        source: hasOpenRouter ? "ai" : "fallback",
+        source: "ai",
         text: reply || topic.fallbackReply,
       });
       if (ttsEnabled) {
@@ -762,38 +727,25 @@ const GameEngine = () => {
       text: prompt,
     });
     setQuestionDraft("");
-    setChatError(
-      hasOpenRouter ? null : "目前未連上對話服務。請確認已設定 VITE_OPENROUTER_API_KEY，並重新啟動開發伺服器。",
-    );
+    setChatError(null);
     setChatLoading(true);
 
     try {
-      const reply = hasOpenRouter
-        ? await generateCharacterReply({
-            config: {
-              apiKey: runtimeApiKey,
-              chatModel,
-              imageModel,
-            },
-            currentNode: currentNode.title,
-            discoveredClues: discoveredClueIds.map((clueId) => wanbiClues[clueId].summary),
-            history: (chatHistory[selectedCharacterId] || []).map((entry) => ({
-              role: entry.role,
-              text: entry.text,
-            })),
-            prompt,
-            systemPrompt: currentCharacter.systemPrompt,
-          })
-        : buildFallbackCharacterReply({
-            discoveredClueIds,
-            prompt,
-            selectedCharacterId,
-          });
+      const reply = await generateCharacterReply({
+        currentNode: currentNode.title,
+        discoveredClues: discoveredClueIds.map((clueId) => wanbiClues[clueId].summary),
+        history: (chatHistory[selectedCharacterId] || []).map((entry) => ({
+          role: entry.role,
+          text: entry.text,
+        })),
+        prompt,
+        systemPrompt: currentCharacter.systemPrompt,
+      });
 
       appendChatEntry(selectedCharacterId, {
         id: createId(),
         role: "assistant",
-        source: hasOpenRouter ? "ai" : "fallback",
+        source: "ai",
         text: reply,
       });
       if (ttsEnabled) {
@@ -1426,9 +1378,7 @@ const GameEngine = () => {
                           </div>
                         ) : (
                           <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-border/60 bg-secondary/30 text-sm text-muted-foreground">
-                            {hasOpenRouter
-                              ? "這條線索已解鎖，稍後會顯示對應畫面。"
-                              : "目前無法顯示這條線索的畫面。"}
+                            這條線索已解鎖，稍後會顯示對應畫面。
                           </div>
                         )}
 
